@@ -15,6 +15,6 @@ GOTO="asusd_end"
 
 LABEL="asusd_start"
 ACTION=="add|change", DRIVER=="asus-nb-wmi", TAG+="systemd", ENV{SYSTEMD_WANTS}="asusd.service"
-ACTION=="add|remove", DRIVER=="asus-nb-wmi", TAG+="systemd", RUN+="systemctl restart asusd.service"
+ACTION=="add|remove", DRIVER=="asus-nb-wmi", TAG+="systemd", RUN+="/usr/bin/systemctl restart asusd.service"
 
 LABEL="asusd_end"
