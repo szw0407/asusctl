@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changes
+- Fix nv_base_tgp being referenced as dgpu_base_tgp
 
 ## [6.3.4]
 
