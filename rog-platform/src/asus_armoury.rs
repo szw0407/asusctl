@@ -305,7 +305,7 @@ define_attribute_getters!(
     nv_dynamic_boost,
     nv_temp_target,
     nv_base_tgp,
-    dgpu_tgp,
+    nv_tgp,
     charge_mode,
     boot_sound,
     kbd_leds_awake,
@@ -331,7 +331,7 @@ define_attribute_getters!(
         nv_dynamic_boost: Ppt,
         nv_temp_target: Ppt,
         nv_base_tgp: Ppt,
-        dgpu_tgp: Ppt,
+        nv_tgp: Ppt,
 
         gpu_mux_mode: Gpu,
         egpu_connected: Gpu,
