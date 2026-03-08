@@ -124,6 +124,14 @@ export global SystemPageData {
     callback cb_nv_dynamic_boost(int);
     callback cb_default_nv_dynamic_boost();
 
+    in-out property <AttrMinMax> nv_tgp: {
+        min: 0,
+        max: 175,
+        current: 80,
+    };
+    callback cb_nv_tgp(int);
+    callback cb_default_nv_tgp();
+
     in-out property <AttrMinMax> nv_temp_target: {
         min: 0,
         max: 80,
@@ -323,7 +331,7 @@ export component PageSystem inherits Rectangle {
                 }
             }
 
-            if (SystemPageData.ppt_pl1_spl.max > 0 && SystemPageData.ppt_pl1_spl.current != -1) || (SystemPageData.ppt_pl2_sppt.max > 0 && SystemPageData.ppt_pl2_sppt.current != -1) || (SystemPageData.ppt_pl3_fppt.max > 0 && SystemPageData.ppt_pl3_fppt.current != -1) || (SystemPageData.ppt_fppt.max > 0 && SystemPageData.ppt_fppt.current != -1) || (SystemPageData.ppt_apu_sppt.max > 0 && SystemPageData.ppt_apu_sppt.current != -1) || (SystemPageData.nv_temp_target.max > 0 && SystemPageData.nv_temp_target.current != -1) || (SystemPageData.nv_dynamic_boost.max > 0 && SystemPageData.nv_dynamic_boost.current != -1): HorizontalLayout {
+            if (SystemPageData.ppt_pl1_spl.max > 0 && SystemPageData.ppt_pl1_spl.current != -1) || (SystemPageData.ppt_pl2_sppt.max > 0 && SystemPageData.ppt_pl2_sppt.current != -1) || (SystemPageData.ppt_pl3_fppt.max > 0 && SystemPageData.ppt_pl3_fppt.current != -1) || (SystemPageData.ppt_fppt.max > 0 && SystemPageData.ppt_fppt.current != -1) || (SystemPageData.ppt_apu_sppt.max > 0 && SystemPageData.ppt_apu_sppt.current != -1) || (SystemPageData.nv_tgp.max > 0 && SystemPageData.nv_tgp.current != -1) || (SystemPageData.nv_temp_target.max > 0 && SystemPageData.nv_temp_target.current != -1) || (SystemPageData.nv_dynamic_boost.max > 0 && SystemPageData.nv_dynamic_boost.current != -1): HorizontalLayout {
                 padding-right: 10px;
                 padding-left: 10px;
                 alignment: LayoutAlignment.space-between;
@@ -474,6 +482,24 @@ export component PageSystem inherits Rectangle {
                 released(value) => {
                     SystemPageData.nv_dynamic_boost.current = Math.round(value);
                     SystemPageData.cb_nv_dynamic_boost(Math.round(value));
+                }
+            }
+
+            if SystemPageData.nv_tgp.max > 0 && SystemPageData.nv_tgp.current != -1: SystemSlider {
+                text: @tr("nv_tgp" => "Dedicated GPU TGP");
+                title: @tr("nv_tgp" => "Dedicated GPU TGP");
+                help_text: @tr("nv_tgp_help" => "Total graphics power limit for the dedicated NVIDIA GPU. Higher values can improve performance at the cost of additional heat and power draw.");
+                minimum: SystemPageData.nv_tgp.min;
+                maximum: SystemPageData.nv_tgp.max;
+                value: SystemPageData.nv_tgp.current;
+                enabled <=> SystemPageData.enable_ppt_group;
+                has_reset: true;
+                cb_do_reset => {
+                    SystemPageData.cb_default_nv_tgp();
+                }
+                released(value) => {
+                    SystemPageData.nv_tgp.current = Math.round(value);
+                    SystemPageData.cb_nv_tgp(Math.round(value));
                 }
             }
 

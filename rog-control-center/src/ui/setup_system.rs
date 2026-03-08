@@ -50,6 +50,7 @@ pub fn setup_system_page(ui: &MainWindow, _config: Arc<Mutex<Config>>) {
     ui.global::<SystemPageData>().set_ppt_fppt(MINMAX);
     ui.global::<SystemPageData>().set_ppt_apu_sppt(MINMAX);
     ui.global::<SystemPageData>().set_ppt_platform_sppt(MINMAX);
+    ui.global::<SystemPageData>().set_nv_tgp(MINMAX);
     ui.global::<SystemPageData>().set_nv_dynamic_boost(MINMAX);
     ui.global::<SystemPageData>().set_nv_temp_target(MINMAX);
     ui.global::<SystemPageData>().set_ppt_enabled(false);
@@ -662,7 +663,12 @@ pub fn setup_system_page_callbacks(ui: &MainWindow, _states: Arc<Mutex<Config>>)
                                 setup_minmax_external!(nv_temp_target, handle, attr, platform);
                             }
                             FirmwareAttribute::DgpuBaseTgp => {}
-                            FirmwareAttribute::DgpuTgp => {}
+                            FirmwareAttribute::DgpuTgp => {
+                                init_minmax_property!(nv_tgp, handle, attr);
+                                setup_callback!(nv_tgp, handle, attr, i32);
+                                setup_callback_restore_default!(nv_tgp, handle, attr);
+                                setup_minmax_external!(nv_tgp, handle, attr, platform);
+                            }
                             FirmwareAttribute::ChargeMode => {}
                             FirmwareAttribute::BootSound => {
                                 init_property!(boot_sound, handle, value, i32);
