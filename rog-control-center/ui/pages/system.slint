@@ -486,8 +486,8 @@ export component PageSystem inherits Rectangle {
             }
 
             if SystemPageData.nv_tgp.max > 0 && SystemPageData.nv_tgp.current != -1: SystemSlider {
-                text: @tr("nv_tgp" => "Dedicated GPU TGP");
-                title: @tr("nv_tgp" => "Dedicated GPU TGP");
+                text: @tr("nv_tgp" => "GPU TGP");
+                title: @tr("nv_tgp" => "GPU TGP");
                 help_text: @tr("nv_tgp_help" => "Total graphics power limit for the dedicated NVIDIA GPU. Higher values can improve performance at the cost of additional heat and power draw.");
                 minimum: SystemPageData.nv_tgp.min;
                 maximum: SystemPageData.nv_tgp.max;
