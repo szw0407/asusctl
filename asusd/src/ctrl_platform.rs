@@ -225,6 +225,39 @@ impl CtrlPlatform {
         }
     }
 
+    async fn select_power_profile_for_source(&self, power_plugged: bool) -> PlatformProfile {
+        let configured = if power_plugged {
+            self.config.lock().await.platform_profile_on_ac
+        } else {
+            self.config.lock().await.platform_profile_on_battery
+        };
+
+        // Older configs may still contain Quiet on devices that only support LowPower.
+        // Normalize at apply-time so AC/BAT transitions still work correctly.
+        if configured == PlatformProfile::Quiet {
+            if let Ok(choices) = self.platform.get_platform_profile_choices() {
+                if !choices.contains(&PlatformProfile::Quiet)
+                    && choices.contains(&PlatformProfile::LowPower)
+                {
+                    let mut cfg = self.config.lock().await;
+                    if power_plugged {
+                        cfg.platform_profile_on_ac = PlatformProfile::LowPower;
+                    } else {
+                        cfg.platform_profile_on_battery = PlatformProfile::LowPower;
+                    }
+                    cfg.write();
+                    warn!(
+                        "Configured profile Quiet is unavailable, falling back to LowPower for {}",
+                        if power_plugged { "AC" } else { "battery" }
+                    );
+                    return PlatformProfile::LowPower;
+                }
+            }
+        }
+
+        configured
+    }
+
     async fn update_policy_ac_or_bat(&self, power_plugged: bool, change_epp: bool) {
         if power_plugged && !self.config.lock().await.change_platform_profile_on_ac {
             debug!(
@@ -241,14 +274,13 @@ impl CtrlPlatform {
             return;
         }
 
-        let throttle = if power_plugged {
-            self.config.lock().await.platform_profile_on_ac
-        } else {
-            self.config.lock().await.platform_profile_on_battery
-        };
+        let throttle = self.select_power_profile_for_source(power_plugged).await;
         debug!("Setting {throttle:?} before EPP");
         let epp = self.get_config_epp_for_throttle(throttle).await;
-        self.platform.set_platform_profile(throttle.into()).ok();
+        if let Err(err) = self.platform.set_platform_profile(throttle.into()) {
+            warn!("Failed to set platform profile {throttle:?} on AC/BAT change: {err}");
+            return;
+        }
         self.check_and_set_epp(epp, change_epp);
     }
 }

@@ -5,6 +5,7 @@
 ### Changes
 - Fix nv_base_tgp being referenced as dgpu_base_tgp
 - Add nv_tgp control slider
+- Fix switching to LowPower on unplug
 
 ## [6.3.4]
 
