@@ -471,10 +471,15 @@ impl AsusArmouryAttribute {
             }
         };
 
-        self.attr.set_current_value(&apply_value).map_err(|e| {
-            error!("Could not set value {value} to attribute {name}: {e:?}");
-            e
-        })?;
+        // Only write to sysfs if we have a real value to apply.
+        // When tuning is disabled, the value is stored in config but not
+        // written to hardware — it will be applied when tuning is enabled.
+        if !matches!(apply_value, AttrValue::None) {
+            self.attr.set_current_value(&apply_value).map_err(|e| {
+                error!("Could not set value {value} to attribute {name}: {e:?}");
+                e
+            })?;
+        }
 
         // write config after setting value
         self.config.lock().await.write();
