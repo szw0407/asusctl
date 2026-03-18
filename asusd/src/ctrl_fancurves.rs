@@ -199,31 +199,6 @@ impl CtrlFanCurveZbus {
         self.config.lock().await.write();
         Ok(())
     }
-
-    /// Reset the stored (self) and device curve to the defaults of the
-    /// platform.
-    ///
-    /// Each platform_profile has a different default and the defualt can be
-    /// read only for the currently active profile.
-    async fn reset_profile_curves(&self, profile: PlatformProfile) -> zbus::fdo::Result<()> {
-        // Read the CURRENTLY active profile so we can switch back to it after we write the defaults for the specified profile. This is required because the ACPI method used to set the default values only works for the currently active profile.
-        let active = self.platform.get_platform_profile()?;
-
-        self.platform.set_platform_profile(profile.into())?;
-        self.config
-            .lock()
-            .await
-            .profiles
-            .set_active_curve_to_defaults(profile, &mut find_fan_curve_node()?)?;
-
-        // Switch back to the original profile: defaults for the specified profile
-        // has already been written, and this also ensures we don't leave the
-        // user in a different profile unexpectedly.
-        self.platform.set_platform_profile(active.as_str())?;
-
-        self.config.lock().await.write();
-        Ok(())
-    }
 }
 
 impl crate::ZbusRun for CtrlFanCurveZbus {

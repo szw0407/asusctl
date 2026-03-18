@@ -163,10 +163,6 @@ impl Profile {
     pub fn mains_online(&self) -> Result<bool> {
         Ok(true)
     }
-
-    pub fn reset_profile_curves(&self, _p: rog_profiles::Profile) -> Result<bool> {
-        Ok(true)
-    }
 }
 
 pub struct Led;
