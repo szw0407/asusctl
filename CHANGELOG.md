@@ -6,6 +6,7 @@
 - Fix nv_base_tgp being referenced as dgpu_base_tgp
 - Add nv_tgp control slider
 - Fix switching to LowPower on unplug
+- add g615jm LEDs support: thanks @absolutewisp
 
 ## [6.3.4]
 
