@@ -173,7 +173,7 @@ impl crate::Reloadable for AsusArmouryAttribute {
         let attribute: FirmwareAttribute = self.attr.name().into();
         let name = self.attr.name();
 
-        let config = self.config.lock().await;
+        let mut config = self.config.lock().await;
         let apply_value = match attribute.property_type() {
             FirmwareAttributeType::Ppt => {
                 let profile: PlatformProfile = self.platform.get_platform_profile()?.into();
@@ -199,6 +199,10 @@ impl crate::Reloadable for AsusArmouryAttribute {
                 apply_value.map_or(AttrValue::None, AttrValue::Integer)
             }
             FirmwareAttributeType::Gpu => {
+                if config.armoury_settings.remove(&attribute).is_some() {
+                    info!("Removed persisted GPU attribute {name} from config");
+                    config.write();
+                }
                 info!("Reload called on GPU attribute {name}: doing nothing");
                 AttrValue::None
             }
@@ -412,6 +416,10 @@ impl AsusArmouryAttribute {
                     }
                 }
             }
+            FirmwareAttributeType::Gpu => {
+                debug!("Setting GPU attribute {name} = {value} without persisting it");
+                AttrValue::Integer(value)
+            }
             _ => {
                 let mut settings = self.config.lock().await;
                 settings
@@ -503,49 +511,60 @@ pub async fn set_config_or_default(
     let mut changed = false;
     for attr in attrs.attributes().iter() {
         let name: FirmwareAttribute = attr.name().into();
-        if name.property_type() == FirmwareAttributeType::Ppt {
-            let tuning = config.select_tunings(power_plugged, profile);
-            if !tuning.enabled {
-                debug!("Tuning group is not enabled, skipping");
-                continue;
-            }
+        match name.property_type() {
+            FirmwareAttributeType::Ppt => {
+                let tuning = config.select_tunings(power_plugged, profile);
+                if !tuning.enabled {
+                    debug!("Tuning group is not enabled, skipping");
+                    continue;
+                }
 
-            if let Some(tune) = tuning.group.get(&name) {
-                attr.set_current_value(&AttrValue::Integer(*tune))
-                    .map_err(|e| {
-                        error!("Failed to set {}: {e}", <&str>::from(name));
-                    })
-                    .ok();
-            } else {
-                let default = attr.default_value();
-                attr.set_current_value(default)
-                    .map_err(|e| {
-                        error!("Failed to set {}: {e}", <&str>::from(name));
-                    })
-                    .ok();
-                if let AttrValue::Integer(i) = default {
-                    tuning.group.insert(name, *i);
+                if let Some(tune) = tuning.group.get(&name) {
+                    attr.set_current_value(&AttrValue::Integer(*tune))
+                        .map_err(|e| {
+                            error!("Failed to set {}: {e}", <&str>::from(name));
+                        })
+                        .ok();
+                } else {
+                    let default = attr.default_value();
+                    attr.set_current_value(default)
+                        .map_err(|e| {
+                            error!("Failed to set {}: {e}", <&str>::from(name));
+                        })
+                        .ok();
+                    if let AttrValue::Integer(i) = default {
+                        tuning.group.insert(name, *i);
+                        info!(
+                            "Set default tuning config for {} = {:?}",
+                            <&str>::from(name),
+                            i
+                        );
+                        changed = true;
+                    }
+                }
+            }
+            FirmwareAttributeType::Gpu => {
+                if config.armoury_settings.remove(&name).is_some() {
                     info!(
-                        "Set default tuning config for {} = {:?}",
-                        <&str>::from(name),
-                        i
+                        "Removed persisted GPU attribute {} from config",
+                        <&str>::from(name)
                     );
                     changed = true;
                 }
             }
-        } else {
-            // Handle non-PPT attributes (boolean and other settings)
-            if let Some(saved_value) = config.armoury_settings.get(&name) {
-                attr.set_current_value(&AttrValue::Integer(*saved_value))
-                    .map_err(|e| {
-                        error!("Failed to set {}: {e}", <&str>::from(name));
-                    })
-                    .ok();
-                info!(
-                    "Restored armoury setting for {} = {:?}",
-                    <&str>::from(name),
-                    saved_value
-                );
+            _ => {
+                if let Some(saved_value) = config.armoury_settings.get(&name) {
+                    attr.set_current_value(&AttrValue::Integer(*saved_value))
+                        .map_err(|e| {
+                            error!("Failed to set {}: {e}", <&str>::from(name));
+                        })
+                        .ok();
+                    info!(
+                        "Restored armoury setting for {} = {:?}",
+                        <&str>::from(name),
+                        saved_value
+                    );
+                }
             }
         }
     }
