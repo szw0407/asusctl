@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use config_traits::StdConfig;
@@ -33,6 +34,7 @@ fn dbus_path_for_attr(attr_name: &str) -> OwnedObjectPath {
 pub struct AsusArmouryAttribute {
     attr: Attribute,
     config: Arc<Mutex<Config>>,
+    queued_gpu: Arc<Mutex<HashMap<FirmwareAttribute, i32>>>,
     /// platform control required here for access to PPD or Throttle profile
     platform: RogPlatform,
     power: AsusPower,
@@ -44,10 +46,12 @@ impl AsusArmouryAttribute {
         platform: RogPlatform,
         power: AsusPower,
         config: Arc<Mutex<Config>>,
+        queued_gpu: Arc<Mutex<HashMap<FirmwareAttribute, i32>>>,
     ) -> Self {
         Self {
             attr,
             config,
+            queued_gpu,
             platform,
             power,
         }
@@ -380,6 +384,17 @@ impl AsusArmouryAttribute {
             ));
         }
 
+        /*
+        // This code would override the current_value with queued GPU value if present
+        // but I don't want to do that for now because it would cause confusion where
+        // current_value doesn't reflect actual firmware state until apply_queued_gpu_value is called. Instead, queued GPU values are only visible through the queued_gpu_value property and are applied on shutdown without affecting current_value.
+        if self.name().property_type() == FirmwareAttributeType::Gpu {
+            if let Some(saved_value) = self.queued_gpu.lock().await.get(&self.name()) {
+                return Ok(*saved_value);
+            }
+        }
+        */
+
         if let Ok(AttrValue::Integer(i)) = self.attr.current_value() {
             return Ok(i);
         }
@@ -434,8 +449,9 @@ impl AsusArmouryAttribute {
                 }
             }
             FirmwareAttributeType::Gpu => {
-                debug!("Setting GPU attribute {name} = {value} without persisting it");
-                AttrValue::Integer(value)
+                debug!("Queueing GPU attribute {name} = {value} for delayed apply");
+                self.queued_gpu.lock().await.insert(self.name(), value);
+                return Ok(());
             }
             _ => {
                 let mut settings = self.config.lock().await;
@@ -462,7 +478,51 @@ impl AsusArmouryAttribute {
 
         // write config after setting value
         self.config.lock().await.write();
+
         Ok(())
+    }
+
+    /// Returns queued GPU value when present, otherwise `-1`.
+    async fn queued_gpu_value(&self) -> fdo::Result<i32> {
+        if self.name().property_type() != FirmwareAttributeType::Gpu {
+            return Ok(-1);
+        }
+
+        Ok(self
+            .queued_gpu
+            .lock()
+            .await
+            .get(&self.name())
+            .copied()
+            .unwrap_or(-1))
+    }
+
+    /// Applies queued GPU value if present and returns whether anything was applied.
+    async fn apply_queued_gpu_value(&mut self) -> fdo::Result<bool> {
+        if self.name().property_type() != FirmwareAttributeType::Gpu {
+            return Ok(false);
+        }
+
+        let name = self.name();
+        let Some(value) = self.queued_gpu.lock().await.remove(&name) else {
+            return Ok(false);
+        };
+
+        self.attr
+            .set_current_value(&AttrValue::Integer(value))
+            .map_err(|e| {
+                error!(
+                    "Could not apply queued GPU attribute {} = {value}: {e:?}",
+                    <&str>::from(name)
+                );
+                e
+            })?;
+
+        info!(
+            "Applied queued GPU attribute {} = {value}",
+            <&str>::from(name)
+        );
+        Ok(true)
     }
 }
 
@@ -474,12 +534,14 @@ pub async fn start_attributes_zbus(
     config: Arc<Mutex<Config>>,
 ) -> Result<ArmouryAttributeRegistry, RogError> {
     let mut registry = ArmouryAttributeRegistry::default();
+    let queued_gpu = Arc::new(Mutex::new(HashMap::new()));
     for attr in attributes.attributes() {
         let mut attr = AsusArmouryAttribute::new(
             attr.clone(),
             platform.clone(),
             power.clone(),
             config.clone(),
+            queued_gpu.clone(),
         );
 
         let registry_attr = attr.clone();
@@ -561,9 +623,11 @@ pub async fn set_config_or_default(
                 }
             }
             FirmwareAttributeType::Gpu => {
+                // Clean stale persisted queue from older versions. GPU deferred
+                // writes are now in-memory and are applied only on shutdown.
                 if config.armoury_settings.remove(&name).is_some() {
                     info!(
-                        "Removed persisted GPU attribute {} from config",
+                        "Removed stale persisted GPU attribute {} from config",
                         <&str>::from(name)
                     );
                     changed = true;

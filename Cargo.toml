@@ -17,6 +17,7 @@ resolver = "2"
 members = [
   "asusctl",
   "asusd",
+  "asus-shutdown",
   "asusd-user",
   "config-traits",
   "dmi-id",
@@ -31,7 +32,7 @@ members = [
   "rog-scsi",
 ]
 
-default-members = ["asusctl", "asusd", "asusd-user", "rog-control-center"]
+default-members = ["asusctl", "asusd", "asus-shutdown", "asusd-user", "rog-control-center"]
 
 [workspace.dependencies]
 tokio = { version = "^1.39.0", default-features = false, features = [

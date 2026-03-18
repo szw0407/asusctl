@@ -211,6 +211,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "asus-shutdown"
+version = "6.3.4"
+dependencies = [
+ "env_logger",
+ "futures-util",
+ "log",
+ "logind-zbus",
+ "rog_dbus",
+ "rog_platform",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "asusctl"
 version = "6.3.4"
 dependencies = [

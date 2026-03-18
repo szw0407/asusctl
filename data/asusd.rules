@@ -16,7 +16,7 @@ ENV{DMI_FAMILY}=="*EXPERTBOOK*", GOTO="asusd_start"
 GOTO="asusd_end"
 
 LABEL="asusd_start"
-ACTION=="add|change", DRIVER=="asus-nb-wmi", TAG+="systemd", ENV{SYSTEMD_WANTS}+="asusd.service"
-ACTION=="add|remove", DRIVER=="asus-nb-wmi", TAG+="systemd", ENV{SYSTEMD_WANTS}+="asusd.service"
+ACTION=="add|change", DRIVER=="asus-nb-wmi", TAG+="systemd", ENV{SYSTEMD_WANTS}+="asusd.service asus-shutdown.service"
+ACTION=="add|remove", DRIVER=="asus-nb-wmi", TAG+="systemd", ENV{SYSTEMD_WANTS}+="asusd.service asus-shutdown.service"
 
 LABEL="asusd_end"

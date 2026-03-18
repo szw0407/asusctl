@@ -49,5 +49,14 @@ pub trait AsusArmoury {
     #[zbus(property)]
     fn scalar_increment(&self) -> zbus::Result<i32>;
 
+    /// QueuedGpuValue property. Returns queued deferred GPU value, or `-1`
+    /// when no queued value exists.
+    #[zbus(property)]
+    fn queued_gpu_value(&self) -> zbus::Result<i32>;
+
     async fn restore_default(&self) -> zbus::Result<()>;
+
+    /// Applies queued deferred GPU value, if any, and returns whether a value
+    /// was applied.
+    async fn apply_queued_gpu_value(&self) -> zbus::Result<bool>;
 }

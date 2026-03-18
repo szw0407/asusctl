@@ -1,0 +1,22 @@
+[package]
+name = "asus-shutdown"
+license.workspace = true
+version.workspace = true
+readme.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Deferred shutdown-time ASUS firmware attribute applier"
+edition.workspace = true
+
+[dependencies]
+rog_dbus = { path = "../rog-dbus" }
+rog_platform = { path = "../rog-platform" }
+
+tokio.workspace = true
+zbus.workspace = true
+logind-zbus.workspace = true
+futures-util.workspace = true
+
+log.workspace = true
+env_logger.workspace = true

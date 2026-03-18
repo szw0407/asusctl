@@ -14,6 +14,7 @@ zshcpl = $(datarootdir)/zsh/site-functions
 BIN_ROG := rog-control-center
 BIN_C := asusctl
 BIN_D := asusd
+BIN_S := asus-shutdown
 BIN_U := asusd-user
 LEDCFG := aura_support.ron
 
@@ -62,6 +63,9 @@ distclean:
 target/$(TARGET)/$(BIN_D): $(SRC)
 	$(MAKE) build
 
+target/$(TARGET)/$(BIN_S): $(SRC)
+	$(MAKE) build
+
 target/$(TARGET)/$(BIN_C): $(SRC)
 	$(MAKE) build
 
@@ -74,6 +78,9 @@ target/$(TARGET)/$(BIN_ROG): $(SRC)
 install-asusd: target/$(TARGET)/$(BIN_D)
 	$(INSTALL_PROGRAM) "./target/$(TARGET)/$(BIN_D)" "$(DESTDIR)$(bindir)/$(BIN_D)"
 
+install-asus-shutdown: target/$(TARGET)/$(BIN_S)
+	$(INSTALL_PROGRAM) "./target/$(TARGET)/$(BIN_S)" "$(DESTDIR)$(bindir)/$(BIN_S)"
+
 install-asusctl: target/$(TARGET)/$(BIN_C)
 	$(INSTALL_PROGRAM) "./target/$(TARGET)/$(BIN_C)" "$(DESTDIR)$(bindir)/$(BIN_C)"
 
@@ -83,9 +90,9 @@ install-asusd_user: target/$(TARGET)/$(BIN_U)
 install-rog_gui: target/$(TARGET)/$(BIN_ROG)
 	$(INSTALL_PROGRAM) "./target/$(TARGET)/$(BIN_ROG)" "$(DESTDIR)$(bindir)/$(BIN_ROG)"
 
-.PHONY: install-asusd install-asusctl install-asusd_user install-rog_gui
+.PHONY: install-asusd install-asus-shutdown install-asusctl install-asusd_user install-rog_gui
 
-install-program: install-asusd install-asusctl install-asusd_user install-rog_gui
+install-program: install-asusd install-asus-shutdown install-asusctl install-asusd_user install-rog_gui
 
 install-data-rog_gui:
 	$(INSTALL_DATA) "./rog-control-center/data/$(BIN_ROG).desktop" "$(DESTDIR)$(datarootdir)/applications/$(BIN_ROG).desktop"
@@ -112,6 +119,7 @@ install-data-asusd:
 	$(INSTALL_DATA) "./data/$(BIN_D).conf" "$(DESTDIR)$(datarootdir)/dbus-1/system.d/$(BIN_D).conf"
 
 	$(INSTALL_DATA) "./data/$(BIN_D).service" "$(DESTDIR)$(libdir)/systemd/system/$(BIN_D).service"
+	$(INSTALL_DATA) "./data/$(BIN_S).service" "$(DESTDIR)$(libdir)/systemd/system/$(BIN_S).service"
 
 	cd rog-anime/data && find "./anime" -type f -exec $(INSTALL_DATA) "{}" "$(DESTDIR_REALPATH)$(datarootdir)/asusd/{}" \;
 
@@ -129,10 +137,12 @@ uninstall:
 
 	rm -f "$(DESTDIR)$(bindir)/$(BIN_C)"
 	rm -f "$(DESTDIR)$(bindir)/$(BIN_D)"
+	rm -f "$(DESTDIR)$(bindir)/$(BIN_S)"
 	rm -f "$(DESTDIR)$(libdir)/udev/rules.d/99-$(BIN_D).rules"
 	rm -f "$(DESTDIR)/etc/asusd/$(LEDCFG)"
 	rm -f "$(DESTDIR)$(datarootdir)/dbus-1/system.d/$(BIN_D).conf"
 	rm -f "$(DESTDIR)$(libdir)/systemd/system/$(BIN_D).service"
+	rm -f "$(DESTDIR)$(libdir)/systemd/system/$(BIN_S).service"
 	rm -r "$(DESTDIR)$(datarootdir)/icons/hicolor/512x512/apps/asus_notif_yellow.png"
 	rm -r "$(DESTDIR)$(datarootdir)/icons/hicolor/512x512/apps/asus_notif_green.png"
 	rm -r "$(DESTDIR)$(datarootdir)/icons/hicolor/512x512/apps/asus_notif_red.png"
@@ -174,6 +184,7 @@ endif
 ifeq ($(STRIP_BINARIES),1)
 	strip -s ./target/$(TARGET)/$(BIN_C)
 	strip -s ./target/$(TARGET)/$(BIN_D)
+	strip -s ./target/$(TARGET)/$(BIN_S)
 	strip -s ./target/$(TARGET)/$(BIN_U)
 	strip -s ./target/$(TARGET)/$(BIN_ROG)
 endif
