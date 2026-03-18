@@ -260,6 +260,8 @@ pub enum FirmwareAttributeType {
     Ppt,
     Gpu,
     Bios,
+    /// Attribute is read-only and must never be written by asusd.
+    ReadOnly,
 }
 
 macro_rules! define_attribute_getters {
@@ -330,7 +332,7 @@ define_attribute_getters!(
         ppt_fppt: Ppt,
         nv_dynamic_boost: Ppt,
         nv_temp_target: Ppt,
-        nv_base_tgp: Ppt,
+        nv_base_tgp: ReadOnly,
         nv_tgp: Ppt,
 
         gpu_mux_mode: Gpu,

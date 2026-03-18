@@ -206,6 +206,14 @@ impl crate::Reloadable for AsusArmouryAttribute {
                 info!("Reload called on GPU attribute {name}: doing nothing");
                 AttrValue::None
             }
+            FirmwareAttributeType::ReadOnly => {
+                if config.armoury_settings.remove(&attribute).is_some() {
+                    info!("Removed stale persisted read-only attribute {name} from config");
+                    config.write();
+                }
+                info!("Reload called on read-only attribute {name}: doing nothing");
+                AttrValue::None
+            }
             _ => {
                 info!("Reload called on firmware attribute {name}");
                 match config.armoury_settings.get(&attribute) {
@@ -383,6 +391,15 @@ impl AsusArmouryAttribute {
     #[zbus(property)]
     async fn set_current_value(&mut self, value: i32) -> fdo::Result<()> {
         let name = self.attr.name();
+
+        // if read-only, don't even attempt to set or persist value
+        if self.name().property_type() == FirmwareAttributeType::ReadOnly {
+            warn!("Attempted to set read-only attribute {name}: write discarded");
+            return Err(fdo::Error::NotSupported(format!(
+                "{name} is read-only and cannot be changed"
+            )));
+        }
+
         let apply_value = match self.name().property_type() {
             FirmwareAttributeType::Ppt => {
                 let profile: PlatformProfile = self.platform.get_platform_profile()?.into();
@@ -551,6 +568,16 @@ pub async fn set_config_or_default(
                     );
                     changed = true;
                 }
+            }
+            FirmwareAttributeType::ReadOnly => {
+                if config.armoury_settings.remove(&name).is_some() {
+                    info!(
+                        "Removed stale persisted read-only attribute {} from config",
+                        <&str>::from(name)
+                    );
+                    changed = true;
+                }
+                // Never restore or apply read-only attributes
             }
             _ => {
                 if let Some(saved_value) = config.armoury_settings.get(&name) {
