@@ -109,7 +109,7 @@ impl From<&str> for AuraDeviceType {
             "1866" | "18c6" | "1869" | "1854" => Self::LaptopKeyboardPre2021,
             "1abe" | "1b4c" => Self::Ally,
             "19b3" | "193b" => Self::AnimeOrSlash,
-            "19b6" => Self::LaptopKeyboard2021,
+            "19b6" | "1a30" => Self::LaptopKeyboard2021,
             _ => Self::Unknown,
         }
     }
