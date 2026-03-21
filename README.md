@@ -179,6 +179,6 @@ The use of ROG and ASUS trademarks within this website and associated tools and 
 
 ---
 
-## AI Disaclaimer
+## AI Disclaimer
 
-Portions of this code have been written by various AI tools and reviewed by the maintainer exaclty as with every other contribution.
+Portions of this code have been written by various AI tools and reviewed by the maintainer exactly as with every other contribution.
