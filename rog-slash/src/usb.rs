@@ -41,7 +41,7 @@ pub fn get_slash_type() -> SlashType {
     if board_name.contains("G614F") {
         SlashType::G614_2025
     } else if [
-        "GA403W", "GA403UH", "GA403UM", "GA403UP",
+        "GA403W", "GA403UH", "GA403UM", "GA403UP", "GA403GM",
     ]
     .iter()
     .any(|s| board_name.contains(s))
