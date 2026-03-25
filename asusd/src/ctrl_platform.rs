@@ -640,6 +640,15 @@ impl CtrlPlatform {
             .unwrap_or_default();
         let profile: PlatformProfile = self.platform.get_platform_profile()?.into();
 
+        // Update config and persist BEFORE any kernel calls that trigger the
+        // platform profile watcher, otherwise the watcher races us and reads
+        // stale `enabled` state.
+        {
+            let mut config = self.config.lock().await;
+            config.select_tunings(power_plugged == 1, profile).enabled = enable;
+            config.write();
+        }
+
         if enable {
             // Clone to reduce blocking
             let tuning = self
@@ -675,16 +684,9 @@ impl CtrlPlatform {
                 }
             }
         } else {
-            // finally, reapply the profile to ensure acpi does the thingy
+            // reapply the profile to ensure acpi resets PPT to defaults
             self.platform.set_platform_profile(profile.into())?;
         }
-
-        self.config
-            .lock()
-            .await
-            .select_tunings(power_plugged == 1, profile)
-            .enabled = enable;
-        self.config.lock().await.write();
 
         // Re-emit armoury attribute limits so GUI sees updated min/max for PPT
         // attributes which can change when enabling/disabling PPT tuning groups.
