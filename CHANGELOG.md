@@ -4,6 +4,13 @@
 
 ### Changes
 
+- Fix a race condition in changing TDP values: thanks @Ghoul4500
+- Fix an issue with aura config file: thanks @Ghoul4500
+- Add slash support for GA403GM: thanks @dimeskigj
+- Add support for G615JHR: thanks @absolutewisp and @Tomo-q3l
+- Add aura support for GZ302: thanks @dm_zharov
+- Fix README.md spelling: thanks @Bl4ckspell
+
 ## [6.3.5]
 
 ### Changes
