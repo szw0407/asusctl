@@ -509,8 +509,12 @@ impl AsusArmouryAttribute {
         }
 
         let name = self.name();
-        let Some(value) = self.queued_gpu.lock().await.remove(&name) else {
-            return Ok(false);
+        let value = {
+            let queue = self.queued_gpu.lock().await;
+            let Some(value) = queue.get(&name).copied() else {
+                return Ok(false);
+            };
+            value
         };
 
         self.attr
@@ -527,6 +531,11 @@ impl AsusArmouryAttribute {
             "Applied queued GPU attribute {} = {value}",
             <&str>::from(name)
         );
+
+        // Remove only after successful firmware write so transient failures do
+        // not lose deferred shutdown values.
+        self.queued_gpu.lock().await.remove(&name);
+
         Ok(true)
     }
 }

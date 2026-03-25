@@ -176,6 +176,11 @@ async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    info!("Deferred GPU settings queued for shutdown apply:");
+    for action in &queued {
+        info!("  {} => {} ({})", action.name, action.value, action.path);
+    }
+
     wait_for_discrete_gpu_idle().await;
 
     let conn = Connection::system().await?;
