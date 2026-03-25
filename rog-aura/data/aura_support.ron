@@ -361,7 +361,7 @@
     ),
     (
         device_name: "G615JHR",
-        product_id: ["19b6", "G615JHR"],
+        product_id: "",
         layout_name: "g634j-per-key",
         basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Pulse],
         basic_zones: [],
