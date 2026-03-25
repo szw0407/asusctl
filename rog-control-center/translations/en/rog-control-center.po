@@ -287,6 +287,11 @@ msgctxt "ppt_group_enabled"
 msgid "Enable Tuning"
 msgstr ""
 
+#: rog-control-center/ui/pages/system.slint:369
+msgctxt "requires_fan_curve_warning"
+msgid "CPU power limits require an active custom fan curve."
+msgstr ""
+
 #: rog-control-center/ui/pages/system.slint:334 rog-control-center/ui/pages/system.slint:335
 msgctxt "ppt_pl1_spl"
 msgid "CPU Sustained Power Limit"
