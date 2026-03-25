@@ -2,7 +2,7 @@
 Description=ASUS Deferred Shutdown Handler
 Before=shutdown.target reboot.target halt.target
 After=asusd.service systemd-logind.service network.target basic.target
-Requires=asusd.service
+Requires=asusd.service dbus.service
 PartOf=asusd.service
 
 [Service]
