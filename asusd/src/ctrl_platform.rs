@@ -643,12 +643,11 @@ impl CtrlPlatform {
         // Update config and persist BEFORE any kernel calls that trigger the
         // platform profile watcher, otherwise the watcher races us and reads
         // stale `enabled` state.
-        self.config
-            .lock()
-            .await
-            .select_tunings(power_plugged == 1, profile)
-            .enabled = enable;
-        self.config.lock().await.write();
+        {
+            let mut config = self.config.lock().await;
+            config.select_tunings(power_plugged == 1, profile).enabled = enable;
+            config.write();
+        }
 
         if enable {
             // Clone to reduce blocking
