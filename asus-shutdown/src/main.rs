@@ -181,7 +181,9 @@ async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
         info!("  {} => {} ({})", action.name, action.value, action.path);
     }
 
+    info!("Witiging for discrete GPU to become idle before applying settings...");
     wait_for_discrete_gpu_idle().await;
+    info!("Proceeding with applying deferred GPU settings");
 
     let conn = Connection::system().await?;
     for action in queued {
