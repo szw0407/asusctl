@@ -243,11 +243,11 @@ async fn wait_for_discrete_gpu_idle() {
 }
 
 fn discrete_gpu_is_idle(gpu: &DiscreteGpu) -> bool {
-    if gpu.busy {
-        return false;
-    }
-
-    !matches!(gpu.runtime_status.as_deref(), Some("active"))
+    // Only check /proc file descriptors to determine if GPU is in use.
+    // Runtime power state (sysfs power/runtime_status) is unavailable on most
+    // laptops, so we don't rely on it. If a process holds an open fd to the GPU,
+    // it is definitely using it.
+    !gpu.busy
 }
 
 fn collect_discrete_gpu_state() -> Result<Vec<DiscreteGpu>, Box<dyn std::error::Error>> {
