@@ -170,7 +170,13 @@ async fn fetch_pending_actions() -> Result<Vec<PendingAction>, Box<dyn std::erro
 }
 
 async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
+    info!("Checking for deferred GPU settings queued in asusd...");
     let queued = fetch_pending_actions().await?;
+
+    info!(
+        "Found {} deferred GPU settings queued in asusd",
+        queued.len()
+    );
     if queued.is_empty() {
         info!("No deferred GPU settings queued");
         return Ok(());

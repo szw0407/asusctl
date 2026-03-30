@@ -483,6 +483,7 @@ impl AsusArmouryAttribute {
     }
 
     /// Returns queued GPU value when present, otherwise `-1`.
+    #[zbus(property)]
     async fn queued_gpu_value(&self) -> fdo::Result<i32> {
         if self.name().property_type() != FirmwareAttributeType::Gpu {
             return Ok(-1);
