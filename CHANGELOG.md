@@ -4,6 +4,11 @@
 
 ### Changes
 
+## [6.3.6]
+
+### Changes
+
+- Switch GPU works better
 - Reworked asus-shutdown to increase compatibility
 - Fix a race condition in changing TDP values: thanks @Ghoul4500
 - Fix an issue with aura config file: thanks @Ghoul4500
