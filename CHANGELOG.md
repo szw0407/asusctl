@@ -4,6 +4,8 @@
 
 ### Changes
 
+- Improve make uninstall: thanks @htrex
+
 ## [6.3.6]
 
 ### Changes
