@@ -5,6 +5,7 @@
 ### Changes
 
 - Improve make uninstall: thanks @htrex
+- Make asusd start on ProArt PX13
 
 ## [6.3.6]
 

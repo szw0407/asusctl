@@ -1,5 +1,7 @@
 ENV{DMI_VENDOR}="$attr{[dmi/id]sys_vendor}"
-ENV{DMI_VENDOR}!="ASUSTeK COMPUTER INC.", GOTO="asusd_end"
+
+# Was previously "ASUSTeK COMPUTER INC.", but on ProArt PX13 the vendor is just "ASUS"
+ENV{DMI_VENDOR}!="ASUS*", GOTO="asusd_end"
 
 ENV{DMI_FAMILY}="$attr{[dmi/id]product_family}"
 ENV{DMI_FAMILY}=="*TUF*", GOTO="asusd_start"
