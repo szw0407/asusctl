@@ -10,6 +10,7 @@ use futures_util::StreamExt;
 use log::{debug, error, info, warn};
 use logind_zbus::manager::{InhibitType, ManagerProxy};
 use rog_dbus::asus_armoury::AsusArmouryProxy;
+use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Instant};
 use zbus::proxy::CacheProperties;
@@ -22,12 +23,14 @@ const WAIT_FOR_GPU_IDLE: Duration = Duration::from_secs(15);
 const GPU_IDLE_POLL_INTERVAL: Duration = Duration::from_millis(500);
 const GPU_IDLE_STABLE_FOR: Duration = Duration::from_secs(2);
 const WAIT_FOR_NVIDIA_POWERD_EXIT: Duration = Duration::from_secs(10);
+const WAIT_FOR_LOGIND_EXIT: Duration = Duration::from_secs(20);
 const ASUSD_BUS_NAME: &str = "xyz.ljones.Asusd";
 const ASUSD_ARMOURY_IFACE: &str = "xyz.ljones.AsusArmoury";
 const SYSTEMD1_BUS_NAME: &str = "org.freedesktop.systemd1";
 const SYSTEMD1_MANAGER_PATH: &str = "/org/freedesktop/systemd1";
 const SYSTEMD1_MANAGER_IFACE: &str = "org.freedesktop.systemd1.Manager";
 const SYSTEMD1_UNIT_IFACE: &str = "org.freedesktop.systemd1.Unit";
+const LOGIND_SERVICE: &str = "systemd-logind.service";
 const NVIDIA_POWERD_SERVICE: &str = "nvidia-powerd.service";
 const NVIDIA_SERVICES: &[&str] = &[
     NVIDIA_POWERD_SERVICE,
@@ -88,33 +91,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         acquire_shutdown_inhibitor(&manager).await?,
     )));
     let mut shutdown_events = manager.receive_prepare_for_shutdown().await?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let mut term_requested = false;
 
-    while let Some(event) = shutdown_events.next().await {
-        match event.args() {
-            Ok(args) if args.start => {
-                info!("Shutdown requested, applying deferred ASUS GPU settings");
-                if let Err(err) = apply_shutdown_settings().await {
-                    error!("Failed to apply deferred GPU settings: {err}");
-                }
-                inhibitor.lock().await.take();
-                info!("Released shutdown delay inhibitor");
+    loop {
+        tokio::select! {
+            _ = sigterm.recv() => {
+                warn!("Received SIGTERM");
+                term_requested = true;
+                warn!("Deferring exit until deferred shutdown apply reaches a safe completion point");
             }
-            Ok(args) => {
-                debug!("PrepareForShutdown({})", args.start);
-                let mut guard = inhibitor.lock().await;
-                if guard.is_none() {
-                    match acquire_shutdown_inhibitor(&manager).await {
-                        Ok(fd) => {
-                            *guard = Some(fd);
-                            info!("Reacquired shutdown delay inhibitor");
+            event = shutdown_events.next() => {
+                match event {
+                    Some(event) => match event.args() {
+                        Ok(args) if args.start => {
+                            info!("Shutdown requested, applying deferred ASUS GPU settings");
+                            if let Err(err) = apply_shutdown_settings().await {
+                                error!("Failed to apply deferred GPU settings: {err}");
+                            }
+
+                            inhibitor.lock().await.take();
+                            info!("Released shutdown delay inhibitor");
+
+                            if term_requested {
+                                info!("Exiting after deferred shutdown apply completed and SIGTERM was requested");
+                                break;
+                            }
                         }
-                        Err(err) => {
-                            error!("Failed to reacquire shutdown inhibitor: {err}");
+                        Ok(args) => {
+                            debug!("PrepareForShutdown({})", args.start);
+                            let mut guard = inhibitor.lock().await;
+                            if guard.is_none() {
+                                match acquire_shutdown_inhibitor(&manager).await {
+                                    Ok(fd) => {
+                                        *guard = Some(fd);
+                                        info!("Reacquired shutdown delay inhibitor");
+                                    }
+                                    Err(err) => {
+                                        error!("Failed to reacquire shutdown inhibitor: {err}");
+                                    }
+                                }
+                            }
                         }
+                        Err(err) => warn!("Failed to decode PrepareForShutdown signal: {err}"),
+                    },
+                    None => {
+                        info!("PrepareForShutdown signal stream ended");
+                        break;
                     }
                 }
             }
-            Err(err) => warn!("Failed to decode PrepareForShutdown signal: {err}"),
         }
     }
 
@@ -189,11 +215,11 @@ async fn fetch_pending_actions() -> Result<Vec<PendingAction>, Box<dyn std::erro
 }
 
 async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
-    info!("[phase 1/5] Checking for deferred GPU settings queued in asusd...");
+    info!("[phase 1/6] Checking for deferred GPU settings queued in asusd...");
     let queued = fetch_pending_actions().await?;
 
     info!(
-        "[phase 2/5] Found {} deferred GPU settings queued in asusd",
+        "[phase 2/6] Found {} deferred GPU settings queued in asusd",
         queued.len()
     );
     if queued.is_empty() {
@@ -206,13 +232,19 @@ async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
         info!("  {} => {} ({})", action.name, action.value, action.path);
     }
 
-    info!("[phase 3/5] Waiting for discrete GPU to become idle before applying settings...");
+    info!("[phase 3/6] Waiting for discrete GPU to become idle before applying settings...");
     wait_for_discrete_gpu_idle().await;
 
-    info!("[phase 4/5] Preparing NVIDIA stack safety gates before firmware writes...");
+    info!(
+        "[phase 4/6] Waiting for {} to exit before firmware writes...",
+        LOGIND_SERVICE
+    );
+    let _ = wait_for_unit_to_exit(LOGIND_SERVICE, WAIT_FOR_LOGIND_EXIT).await;
+
+    info!("[phase 5/6] Preparing NVIDIA stack safety gates before firmware writes...");
     prepare_nvidia_for_gpu_firmware_writes().await;
 
-    info!("[phase 5/5] Proceeding with applying deferred GPU settings");
+    info!("[phase 6/6] Proceeding with applying deferred GPU settings");
 
     let conn = Connection::system().await?;
     for action in queued {
