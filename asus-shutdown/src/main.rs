@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -17,10 +18,28 @@ use zbus::Connection;
 
 const SERVICE_NAME: &str = "asus-shutdown";
 const SHUTDOWN_REASON: &str = "defer risky ASUS GPU firmware writes until shutdown";
-const WAIT_FOR_GPU_IDLE: Duration = Duration::from_secs(8);
+const WAIT_FOR_GPU_IDLE: Duration = Duration::from_secs(15);
 const GPU_IDLE_POLL_INTERVAL: Duration = Duration::from_millis(500);
+const GPU_IDLE_STABLE_FOR: Duration = Duration::from_secs(2);
+const WAIT_FOR_NVIDIA_POWERD_EXIT: Duration = Duration::from_secs(10);
 const ASUSD_BUS_NAME: &str = "xyz.ljones.Asusd";
 const ASUSD_ARMOURY_IFACE: &str = "xyz.ljones.AsusArmoury";
+const SYSTEMD1_BUS_NAME: &str = "org.freedesktop.systemd1";
+const SYSTEMD1_MANAGER_PATH: &str = "/org/freedesktop/systemd1";
+const SYSTEMD1_MANAGER_IFACE: &str = "org.freedesktop.systemd1.Manager";
+const SYSTEMD1_UNIT_IFACE: &str = "org.freedesktop.systemd1.Unit";
+const NVIDIA_POWERD_SERVICE: &str = "nvidia-powerd.service";
+const NVIDIA_SERVICES: &[&str] = &[
+    NVIDIA_POWERD_SERVICE,
+    "nvidia-persistenced.service",
+    "nvidia-fabricmanager.service",
+];
+const NVIDIA_MODULE_PATHS: &[&str] = &[
+    "/sys/module/nvidia",
+    "/sys/module/nvidia_drm",
+    "/sys/module/nvidia_modeset",
+    "/sys/module/nvidia_uvm",
+];
 
 #[derive(Clone, Debug)]
 struct PendingAction {
@@ -170,11 +189,11 @@ async fn fetch_pending_actions() -> Result<Vec<PendingAction>, Box<dyn std::erro
 }
 
 async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
-    info!("Checking for deferred GPU settings queued in asusd...");
+    info!("[phase 1/5] Checking for deferred GPU settings queued in asusd...");
     let queued = fetch_pending_actions().await?;
 
     info!(
-        "Found {} deferred GPU settings queued in asusd",
+        "[phase 2/5] Found {} deferred GPU settings queued in asusd",
         queued.len()
     );
     if queued.is_empty() {
@@ -187,9 +206,13 @@ async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
         info!("  {} => {} ({})", action.name, action.value, action.path);
     }
 
-    info!("Witiging for discrete GPU to become idle before applying settings...");
+    info!("[phase 3/5] Waiting for discrete GPU to become idle before applying settings...");
     wait_for_discrete_gpu_idle().await;
-    info!("Proceeding with applying deferred GPU settings");
+
+    info!("[phase 4/5] Preparing NVIDIA stack safety gates before firmware writes...");
+    prepare_nvidia_for_gpu_firmware_writes().await;
+
+    info!("[phase 5/5] Proceeding with applying deferred GPU settings");
 
     let conn = Connection::system().await?;
     for action in queued {
@@ -212,8 +235,213 @@ async fn apply_shutdown_settings() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn prepare_nvidia_for_gpu_firmware_writes() {
+    let has_nvidia_modules = NVIDIA_MODULE_PATHS
+        .iter()
+        .any(|path| Path::new(path).exists());
+
+    let mut saw_loaded_or_active_service = false;
+
+    for unit in NVIDIA_SERVICES {
+        let exited = wait_for_unit_to_exit(unit, WAIT_FOR_NVIDIA_POWERD_EXIT).await;
+        if !exited {
+            saw_loaded_or_active_service = true;
+        }
+    }
+
+    if !has_nvidia_modules && !saw_loaded_or_active_service {
+        info!("No NVIDIA modules/services detected, skipping NVIDIA-specific shutdown preparation");
+        return;
+    }
+
+    if !has_nvidia_modules {
+        info!("NVIDIA modules are not loaded, skipping module unload step");
+        return;
+    }
+
+    info!("Preparing NVIDIA driver stack for firmware attribute apply");
+    let output = Command::new("modprobe")
+        .args([
+            "-r", "nvidia_drm", "nvidia_modeset", "nvidia_uvm", "nvidia",
+        ])
+        .output();
+
+    match output {
+        Ok(out) if out.status.success() => {
+            info!("Successfully unloaded NVIDIA modules before firmware attribute apply");
+        }
+        Ok(out) => {
+            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            warn!(
+                "Failed to unload NVIDIA modules before firmware attribute apply (status {}): {}",
+                out.status,
+                if stderr.is_empty() {
+                    "no stderr output"
+                } else {
+                    stderr.as_str()
+                }
+            );
+        }
+        Err(err) => {
+            warn!("Failed to execute modprobe -r for NVIDIA modules: {err}");
+        }
+    }
+}
+
+async fn wait_for_unit_to_exit(unit_name: &str, timeout: Duration) -> bool {
+    info!(
+        "Waiting for {} to exit before applying firmware attributes...",
+        unit_name
+    );
+    let started = Instant::now();
+
+    let conn = match Connection::system().await {
+        Ok(conn) => conn,
+        Err(err) => {
+            warn!("Failed to connect to system bus while waiting for {unit_name}: {err}");
+            return false;
+        }
+    };
+
+    let manager = match zbus::Proxy::new(
+        &conn,
+        SYSTEMD1_BUS_NAME,
+        SYSTEMD1_MANAGER_PATH,
+        SYSTEMD1_MANAGER_IFACE,
+    )
+    .await
+    {
+        Ok(proxy) => proxy,
+        Err(err) => {
+            warn!("Failed to create systemd manager proxy while waiting for {unit_name}: {err}");
+            return false;
+        }
+    };
+
+    let deadline = Instant::now() + timeout;
+
+    loop {
+        let unit_path: Result<zbus::zvariant::OwnedObjectPath, zbus::Error> =
+            manager.call("GetUnit", &(unit_name)).await;
+
+        let unit_path = match unit_path {
+            Ok(path) => path,
+            Err(err) => {
+                let msg = err.to_string();
+                if msg.contains("NoSuchUnit") || msg.contains("not loaded") {
+                    info!(
+                        "{} is not loaded, continuing after {:?}",
+                        unit_name,
+                        started.elapsed()
+                    );
+                    return true;
+                }
+
+                warn!("Failed to lookup {} in systemd: {err}", unit_name);
+                return false;
+            }
+        };
+
+        let props_builder =
+            match zbus::fdo::PropertiesProxy::builder(&conn).destination(SYSTEMD1_BUS_NAME) {
+                Ok(builder) => builder,
+                Err(err) => {
+                    warn!(
+                        "Failed to create properties proxy destination for {}: {err}",
+                        unit_name
+                    );
+                    return false;
+                }
+            };
+
+        let props_builder = match props_builder.path(unit_path.as_str()) {
+            Ok(builder) => builder,
+            Err(err) => {
+                warn!(
+                    "Failed to set properties proxy path for {}: {err}",
+                    unit_name
+                );
+                return false;
+            }
+        };
+
+        let props = match props_builder.build().await {
+            Ok(props) => props,
+            Err(err) => {
+                warn!(
+                    "Failed to query {} properties via systemd API: {err}",
+                    unit_name
+                );
+                return false;
+            }
+        };
+
+        let unit_iface = match zbus::names::InterfaceName::try_from(SYSTEMD1_UNIT_IFACE) {
+            Ok(iface) => iface,
+            Err(err) => {
+                warn!("Failed to parse systemd unit interface name: {err}");
+                return false;
+            }
+        };
+
+        let active_state: String = match props.get(unit_iface.clone(), "ActiveState").await {
+            Ok(value) => match String::try_from(value) {
+                Ok(state) => state,
+                Err(err) => {
+                    warn!("Failed to decode ActiveState for {}: {err}", unit_name);
+                    return false;
+                }
+            },
+            Err(err) => {
+                warn!("Failed to read ActiveState for {}: {err}", unit_name);
+                return false;
+            }
+        };
+
+        let sub_state: String = match props.get(unit_iface, "SubState").await {
+            Ok(value) => match String::try_from(value) {
+                Ok(state) => state,
+                Err(err) => {
+                    warn!("Failed to decode SubState for {}: {err}", unit_name);
+                    return false;
+                }
+            },
+            Err(err) => {
+                warn!("Failed to read SubState for {}: {err}", unit_name);
+                return false;
+            }
+        };
+
+        if active_state == "inactive" || active_state == "failed" {
+            info!(
+                "{} is {} ({}) and considered exited after {:?}",
+                unit_name,
+                active_state,
+                sub_state,
+                started.elapsed()
+            );
+            return true;
+        }
+
+        if Instant::now() >= deadline {
+            warn!(
+                "Timed out waiting for {} to exit (ActiveState={}, SubState={})",
+                unit_name, active_state, sub_state
+            );
+            return false;
+        }
+
+        debug!(
+            "{} still active (ActiveState={}, SubState={}), waiting...",
+            unit_name, active_state, sub_state
+        );
+        sleep(GPU_IDLE_POLL_INTERVAL).await;
+    }
+}
+
 async fn wait_for_discrete_gpu_idle() {
     let deadline = Instant::now() + WAIT_FOR_GPU_IDLE;
+    let mut idle_since: Option<Instant> = None;
 
     loop {
         match collect_discrete_gpu_state() {
@@ -223,8 +451,24 @@ async fn wait_for_discrete_gpu_idle() {
             }
             Ok(gpus) => {
                 if gpus.iter().all(discrete_gpu_is_idle) {
-                    info!("Discrete GPU nodes are idle");
-                    return;
+                    let now = Instant::now();
+                    let idle_start = idle_since.get_or_insert(now);
+                    let idle_for = now.saturating_duration_since(*idle_start);
+
+                    if idle_for >= GPU_IDLE_STABLE_FOR {
+                        info!(
+                            "Discrete GPU nodes have stayed idle for {:?}",
+                            GPU_IDLE_STABLE_FOR
+                        );
+                        return;
+                    }
+
+                    debug!(
+                        "Discrete GPU nodes are idle, waiting {:?} more to avoid driver teardown race",
+                        GPU_IDLE_STABLE_FOR.saturating_sub(idle_for)
+                    );
+                } else {
+                    idle_since = None;
                 }
 
                 if Instant::now() >= deadline {
