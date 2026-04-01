@@ -25,3 +25,5 @@ desktop-extensions/gnome*/*.zip
 CLAUDE.md
 AGENTS.md
 /reference
+
+*.log
