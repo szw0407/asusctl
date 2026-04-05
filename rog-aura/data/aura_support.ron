@@ -576,6 +576,15 @@
         power_zones: [Keyboard],
     ),
     (
+        device_name: "G733QS",
+        product_id: "",
+        layout_name: "g513i-per-key",
+        basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Star, Rain, Highlight, Laser, Ripple, Pulse, Comet, Flash],
+        basic_zones: [],
+        advanced_type: PerKey,
+        power_zones: [Keyboard, Lightbar, Logo, Lid],
+    ),
+    (
         device_name: "G733Z",
         product_id: "",
         layout_name: "g513i-per-key",
