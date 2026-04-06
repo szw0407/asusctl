@@ -88,6 +88,8 @@ impl CtrlFanCurveZbus {
                 config = config.load();
             }
 
+            config.current = platform.get_platform_profile()?.into();
+
             return Ok(Self {
                 config: Arc::new(Mutex::new(config)),
                 platform,
@@ -263,6 +265,7 @@ impl crate::Reloadable for CtrlFanCurveZbus {
                 .profiles
                 .write_profile_curve_to_platform(active, &mut device)?;
         }
+        config.current = active;
 
         Ok(())
     }
