@@ -109,7 +109,7 @@ impl CPUControl {
         }
         for path in &self.paths {
             let mut dev = to_device(path)?;
-            dev.set_attribute_value(ATTR_AVAILABLE_GOVERNORS, String::from(gov))?;
+            dev.set_attribute_value(ATTR_GOVERNOR, String::from(gov))?;
         }
         Ok(())
     }
