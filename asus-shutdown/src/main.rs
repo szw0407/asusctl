@@ -92,13 +92,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )));
     let mut shutdown_events = manager.receive_prepare_for_shutdown().await?;
     let mut sigterm = signal(SignalKind::terminate())?;
-    let mut term_requested = false;
 
     loop {
         tokio::select! {
             _ = sigterm.recv() => {
                 warn!("Received SIGTERM");
-                term_requested = true;
                 warn!("Deferring exit until deferred shutdown apply reaches a safe completion point");
             }
             event = shutdown_events.next() => {
@@ -113,10 +111,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             inhibitor.lock().await.take();
                             info!("Released shutdown delay inhibitor");
 
-                            if term_requested {
-                                info!("Exiting after deferred shutdown apply completed and SIGTERM was requested");
-                                break;
-                            }
+                            info!("Exiting after deferred shutdown apply completed");
+                            break;
                         }
                         Ok(args) => {
                             debug!("PrepareForShutdown({})", args.start);
