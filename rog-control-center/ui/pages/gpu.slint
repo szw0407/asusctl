@@ -10,6 +10,7 @@ export global GPUPageData {
     in-out property <int> egpu_enabled: 0; // 1 == eGPU (XGMobile) enabled
     in-out property <[string]> gpu_modes_choises: [@tr("Integrated"), @tr("Hybrid")];
     in-out property <bool> gpu_mux_available: false;
+    in-out property <bool> gpu_dropdown_enabled: true; // false when GPU switch is in progress
     callback cb_set_gpu_mode(int);
 }
 
@@ -54,6 +55,7 @@ export component PageGPU inherits Rectangle {
                     model <=> GPUPageData.gpu_modes_choises;
                     current_index <=> GPUPageData.gpu_mux_mode;
                     current_value: GPUPageData.gpu_modes_choises[GPUPageData.gpu_mux_mode];
+                    enabled <=> GPUPageData.gpu_dropdown_enabled;
                     selected => {
                         GPUPageData.cb_set_gpu_mode(GPUPageData.gpu_mux_mode)
                     }

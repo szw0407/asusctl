@@ -247,6 +247,7 @@ export component SystemDropdown inherits RogItem {
     in-out property <int> current_index;
     in-out property <string> current_value;
     in-out property <[string]> model;
+    in property <bool> enabled: true;
     callback selected(int);
     HorizontalLayout {
         HorizontalLayout {
@@ -269,6 +270,7 @@ export component SystemDropdown inherits RogItem {
                 model <=> root.model;
                 current-index <=> root.current_index;
                 current-value <=> root.current_value;
+                enabled: root.enabled;
                 selected => {
                     root.selected(root.current_index)
                 }
