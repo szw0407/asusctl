@@ -4,6 +4,7 @@
 
 ### Changes
 
+- Fix keyboard lagging on newer kernels
 - Fix GPU switching via GUI: thanks @evert
 - Fix power governor not being set correctly: thanks @sashok724
 - Improve make uninstall: thanks @htrex
