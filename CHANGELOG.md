@@ -4,6 +4,7 @@
 
 ### Changes
 
+- Fix flicker of anime matrix when in powersave: thanks @barsikus007
 - Add LEDs support for G733QS: thanks @ricoded-o00
 - Fix hang at shutdown: thanks @evert
 - Load fan profiles at start: thanks @rforced
