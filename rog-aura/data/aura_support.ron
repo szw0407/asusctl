@@ -501,7 +501,7 @@
         basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Star, Rain, Highlight, Laser, Ripple, Pulse, Comet, Flash],
         basic_zones: [],
         advanced_type: PerKey,
-        power_zones: [Keyboard],
+        power_zones: [Keyboard, Lightbar],
     ),
     (
         device_name: "G713RW",
