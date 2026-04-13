@@ -239,9 +239,7 @@ impl DeviceManager {
             // Only deduplicate ASUS devices; non-ASUS multi-interface devices are unaffected.
             if let Ok(Some(usb_parent)) = device.parent_with_subsystem_devtype("usb", "usb_device")
             {
-                if usb_parent.attribute_value("idVendor").as_deref()
-                    == Some(std::ffi::OsStr::new("0b05"))
-                {
+                if usb_parent.attribute_value("idVendor") == Some(std::ffi::OsStr::new("0b05")) {
                     let syspath = usb_parent.syspath().to_string_lossy().to_string();
                     if !seen_usb_parents.insert(syspath) {
                         debug!("Skipping duplicate hidraw for USB parent already processed");
