@@ -4,7 +4,7 @@
 // - Add it to Zbus server
 // - If udev sees device removed then remove the zbus path
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use dmi_id::DMIID;
@@ -215,8 +215,11 @@ impl DeviceManager {
         connection: &Connection,
         handles: Arc<Mutex<HashMap<String, Arc<Mutex<HidRaw>>>>>,
     ) -> Result<Vec<AsusDevice>, RogError> {
-        // track and ensure we use only one hidraw per prod_id
-        // let mut interfaces = HashSet::new();
+        // Ensure we only process one hidraw interface per physical USB device.
+        // A USB device can expose multiple HID interfaces (and thus multiple hidraw nodes).
+        // Processing more than one causes duplicate device initialisation which can
+        // interfere with the kernel's own HID driver and trigger a USB reset loop.
+        let mut seen_usb_parents: HashSet<String> = HashSet::new();
         let mut devices: Vec<AsusDevice> = Vec::new();
 
         let mut enumerator = udev::Enumerator::new().map_err(|err| {
@@ -233,6 +236,19 @@ impl DeviceManager {
             .scan_devices()
             .map_err(|e| PlatformError::IoPath("enumerator".to_owned(), e))?
         {
+            // Only deduplicate ASUS devices; non-ASUS multi-interface devices are unaffected.
+            if let Ok(Some(usb_parent)) = device.parent_with_subsystem_devtype("usb", "usb_device")
+            {
+                if usb_parent.attribute_value("idVendor").as_deref()
+                    == Some(std::ffi::OsStr::new("0b05"))
+                {
+                    let syspath = usb_parent.syspath().to_string_lossy().to_string();
+                    if !seen_usb_parents.insert(syspath) {
+                        debug!("Skipping duplicate hidraw for USB parent already processed");
+                        continue;
+                    }
+                }
+            }
             devices.append(&mut Self::init_hid_devices(connection, device, handles.clone()).await?);
         }
 
@@ -563,6 +579,22 @@ impl DeviceManager {
                                         }
                                     }
                                 } else if action == "add" {
+                                    // Guard against initialising a second hidraw interface for a
+                                    // USB device we already track. Without this, a USB reset
+                                    // (e.g. triggered by an earlier duplicate init) fires
+                                    // remove+add events that cause another duplicate init and a
+                                    // permanent reset loop.
+                                    if let Some(path) = dbus_path_for_dev(&parent) {
+                                        if devices
+                                            .lock()
+                                            .await
+                                            .iter()
+                                            .any(|d| d.dbus_path == path)
+                                        {
+                                            debug!("Hotplug add: device {path:?} already registered, skipping");
+                                            return Ok(());
+                                        }
+                                    }
                                     let evdev = event.device();
                                     if let Ok(mut new_devs) = Self::init_hid_devices(
                                         &conn_copy,
