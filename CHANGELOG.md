@@ -4,6 +4,8 @@
 
 ### Changes
 
+- Fix GPU switching via GUI: thanks @evert
+- Fix power governor not being set correctly: thanks @sashok724
 - Improve make uninstall: thanks @htrex
 - Make asusd start on ProArt PX13
 
