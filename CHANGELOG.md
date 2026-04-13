@@ -4,6 +4,10 @@
 
 ### Changes
 
+- Load fan profiles at start: thanks @rforced
+- Start asusd when dmi is ZenBook: thanks @jason01-95
+- Fix G713RS Lightbar support: thanks @Gokhan-Zengin
+- Harden systemd profile: thanks @sashok724
 - Fix keyboard lagging on newer kernels
 - Fix GPU switching via GUI: thanks @evert
 - Fix power governor not being set correctly: thanks @sashok724
