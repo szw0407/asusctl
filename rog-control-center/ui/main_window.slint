@@ -5,6 +5,7 @@ import { SideBar } from "widgets/sidebar.slint";
 import { PageAbout } from "pages/about.slint";
 import { PageFans } from "pages/fans.slint";
 import { PageAnime, AnimePageData } from "pages/anime.slint";
+import { PageSlash, SlashPageData } from "pages/slash.slint";
 import { RogItem } from "widgets/common.slint";
 import { PageAura } from "pages/aura.slint";
 import { PageGPU, GPUPageData } from "pages/gpu.slint";
@@ -16,7 +17,7 @@ import { AuraPageData, AuraDevType, LaptopAuraPower, AuraPowerState, PowerZones,
 export { AuraPageData, AuraDevType, LaptopAuraPower, AuraPowerState, PowerZones, AuraEffect }
 import { PageAppSettings, AppSettingsPageData } from "pages/app_settings.slint";
 
-export { AppSize, AttrMinMax, SystemPageData, AnimePageData, AppSettingsPageData, GPUPageData }
+export { AppSize, AttrMinMax, SystemPageData, AnimePageData, SlashPageData, AppSettingsPageData, GPUPageData }
 
 export component MainWindow inherits Window {
     title: "ROG Control";
@@ -26,6 +27,7 @@ export component MainWindow inherits Window {
     default-font-weight: 400;
     icon: @image-url("../data/rog-control-center.png");
     in property <[bool]> sidebar_items_avilable: [
+        true,
         true,
         true,
         true,
@@ -76,10 +78,11 @@ export component MainWindow inherits Window {
                     @tr("Menu1" => "System Control"),
                     @tr("Menu2" => "Keyboard Aura"),
                     @tr("Menu3" => "AniMe Matrix"),
-                    @tr("Menu4" => "Fan Curves"),
-                    @tr("Menu5" => "GPU Configuration"),
-                    @tr("Menu6" => "App Settings"),
-                    @tr("Menu7" => "About"),
+                    @tr("Menu4" => "Slash Lighting"),
+                    @tr("Menu5" => "Fan Curves"),
+                    @tr("Menu6" => "GPU Configuration"),
+                    @tr("Menu7" => "App Settings"),
+                    @tr("Menu8" => "About"),
                 ];
                 available: root.sidebar_items_avilable;
                 is_tuf: root.is_tuf;
@@ -114,28 +117,34 @@ export component MainWindow inherits Window {
                 visible: side-bar.current-item == 2;
             }
 
-            if(side-bar.current-item == 3): fans := PageFans {
+            if(side-bar.current-item == 3): PageSlash {
                 width: root.width - side-bar.width;
                 height: root.height + 12px;
                 visible: side-bar.current-item == 3;
             }
 
-            if(side-bar.current-item == 4): PageGPU {
+            if(side-bar.current-item == 4): fans := PageFans {
                 width: root.width - side-bar.width;
                 height: root.height + 12px;
                 visible: side-bar.current-item == 4;
             }
 
-            if(side-bar.current-item == 5): PageAppSettings {
+            if(side-bar.current-item == 5): PageGPU {
                 width: root.width - side-bar.width;
                 height: root.height + 12px;
                 visible: side-bar.current-item == 5;
             }
 
-            if(side-bar.current-item == 6): PageAbout {
+            if(side-bar.current-item == 6): PageAppSettings {
                 width: root.width - side-bar.width;
                 height: root.height + 12px;
                 visible: side-bar.current-item == 6;
+            }
+
+            if(side-bar.current-item == 7): PageAbout {
+                width: root.width - side-bar.width;
+                height: root.height + 12px;
+                visible: side-bar.current-item == 7;
             }
 
             if toast: Rectangle {
