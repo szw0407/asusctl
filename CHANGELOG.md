@@ -5,6 +5,7 @@
 ### Changes
 
 - Added slash control: thanks jijiking
+- Disable GPU switching when unsupported
 
 ## [6.3.7]
 
