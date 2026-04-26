@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changes
+
+- Added slash control: thanks jijiking
+
 ## [6.3.7]
 
 ### Changes
