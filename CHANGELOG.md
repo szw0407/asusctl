@@ -6,6 +6,7 @@
 
 - Added slash control: thanks jijiking
 - Disable GPU switching when unsupported
+- Fix inotify watcher path: thanks @TheHeroBrine422
 
 ## [6.3.7]
 
