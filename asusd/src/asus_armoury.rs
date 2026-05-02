@@ -100,7 +100,7 @@ impl AsusArmouryAttribute {
         let name = self.name();
         macro_rules! watch_value_notify {
             ($attr_str:expr, $fn_prop_changed:ident) => {
-                match self.attr.get_watcher($attr_str) {
+                match self.attr.get_watcher() {
                     Ok(watch) => {
                         let name = <&str>::from(name);
                         let ctrl = self.clone();
