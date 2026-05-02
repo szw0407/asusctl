@@ -188,9 +188,8 @@ impl Attribute {
         )
     }
 
-    pub fn get_watcher(&self, attr: &str) -> Result<inotify::Inotify, PlatformError> {
-        let path = self.base_path.join(attr);
-        if let Some(path) = path.to_str() {
+    pub fn get_watcher(&self) -> Result<inotify::Inotify, PlatformError> {
+        if let Some(path) = self.base_path.to_str() {
             let inotify = inotify::Inotify::init()?;
             inotify
                 .watches()
@@ -508,6 +507,21 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    #[ignore = "Can't check in docker env"]
+    fn test_get_watcher() {
+        let attrs = FirmwareAttributes::new();
+        let attr = attrs
+            .attributes()
+            .iter()
+            .find(|a| a.name() == <&str>::from(FirmwareAttribute::BootSound))
+            .unwrap();
+
+        let watcher = attr.get_watcher();
+
+        assert!(watcher.is_ok());
     }
 
     #[test]
