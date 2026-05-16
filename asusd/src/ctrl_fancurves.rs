@@ -161,13 +161,16 @@ impl CtrlFanCurveZbus {
             .await
             .profiles
             .set_profile_curves_enabled(profile, enabled);
-        self.config
-            .lock()
-            .await
-            .profiles
-            .write_profile_curve_to_platform(profile, &mut find_fan_curve_node()?)?;
+        let active: PlatformProfile = self.platform.get_platform_profile()?.into();
+        if active == profile {
+            self.config
+                .lock()
+                .await
+                .profiles
+                .write_profile_curve_to_platform(profile, &mut find_fan_curve_node()?)?;
+            self.reapply_ppt(profile).await;
+        }
         self.config.lock().await.write();
-        self.reapply_ppt(profile).await;
         Ok(())
     }
 
@@ -184,13 +187,16 @@ impl CtrlFanCurveZbus {
             .await
             .profiles
             .set_profile_fan_curve_enabled(profile, fan, enabled);
-        self.config
-            .lock()
-            .await
-            .profiles
-            .write_profile_curve_to_platform(profile, &mut find_fan_curve_node()?)?;
+        let active: PlatformProfile = self.platform.get_platform_profile()?.into();
+        if active == profile {
+            self.config
+                .lock()
+                .await
+                .profiles
+                .write_profile_curve_to_platform(profile, &mut find_fan_curve_node()?)?;
+            self.reapply_ppt(profile).await;
+        }
         self.config.lock().await.write();
-        self.reapply_ppt(profile).await;
         Ok(())
     }
 
