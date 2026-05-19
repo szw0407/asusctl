@@ -102,12 +102,24 @@ impl Aura {
                 platform.lock().await.set_kbd_rgb_mode(&buf)?;
             }
         } else if let Some(hid_raw) = &self.hid {
+            // Some keyboard controllers (e.g. G533QS firmware) silently drop
+            // short HID writes and only honour packets matching the OUTPUT
+            // report size declared in the HID descriptor (64 bytes for the
+            // 0x5d report). Pad effect/SET/APPLY here so we keep working on
+            // newer Strix/Zephyrus models without regressing older laptops.
+            const PADDED_LEN: usize = 64;
             let bytes: [u8; AURA_LAPTOP_LED_MSG_LEN] = mode.into();
+            let mut effect_padded = [0u8; PADDED_LEN];
+            effect_padded[..AURA_LAPTOP_LED_MSG_LEN].copy_from_slice(&bytes);
+            let mut set_padded = [0u8; PADDED_LEN];
+            set_padded[..AURA_LAPTOP_LED_MSG_LEN].copy_from_slice(&AURA_LAPTOP_LED_SET);
+            let mut apply_padded = [0u8; PADDED_LEN];
+            apply_padded[..AURA_LAPTOP_LED_MSG_LEN].copy_from_slice(&AURA_LAPTOP_LED_APPLY);
             let hid_raw = hid_raw.lock().await;
-            hid_raw.write_bytes(&bytes)?;
-            hid_raw.write_bytes(&AURA_LAPTOP_LED_SET)?;
+            hid_raw.write_bytes(&effect_padded)?;
+            hid_raw.write_bytes(&set_padded)?;
             // Changes won't persist unless apply is set
-            hid_raw.write_bytes(&AURA_LAPTOP_LED_APPLY)?;
+            hid_raw.write_bytes(&apply_padded)?;
         } else {
             return Err(RogError::NoAuraKeyboard);
         }
