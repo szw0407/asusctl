@@ -231,6 +231,7 @@ dependencies = [
  "env_logger",
  "gumdrop",
  "log",
+ "png 0.17.16",
  "rog_anime",
  "rog_aura",
  "rog_dbus",
