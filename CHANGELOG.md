@@ -1,12 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## [6.3.8]
 
 ### Changes
 
 - Added slash control: thanks jijiking
 - Disable GPU switching when unsupported
 - Fix inotify watcher path: thanks @TheHeroBrine422
+- Fix AniMe Matrix USB packet chunking: thanks @luca_pisl
+- Start asusd when dmi contains ASUSLaptop: thanks @CongLuanTran
+- Fix packet size for aura: thanks @sikuthenomad
+- Fix DESTDIR handling in Makefile: thanks @martin-flaska
 
 ## [6.3.7]
 
