@@ -28,6 +28,7 @@ argh = "0.1"
 
 [dev-dependencies]
 rog_dbus = { path = "../rog-dbus" }
+png = "0.17"
 
 [package.metadata.deb]
 license-file = ["../LICENSE", "4"]

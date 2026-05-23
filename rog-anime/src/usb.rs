@@ -239,7 +239,9 @@ impl From<AnimShutdown> for i32 {
 /// name only. For this reason `find_node()` must be used also to verify if the
 /// USB device is available.
 ///
-/// The currently known USB device is `19b6`.
+/// The currently known USB device for the AniMe Matrix is `0x193b` (see
+/// `PROD_ID` above). `0x19b6` is a different ASUS USB device (the N-KEY
+/// keyboard interface) — historical comment was incorrect.
 #[inline]
 pub fn get_anime_type() -> AnimeType {
     let dmi = DMIID::new().unwrap_or_default();
