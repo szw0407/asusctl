@@ -9,9 +9,9 @@ use asusd::config::Config;
 use asusd::ctrl_backlight::CtrlBacklight;
 use asusd::ctrl_fancurves::CtrlFanCurveZbus;
 use asusd::ctrl_platform::CtrlPlatform;
-use asusd::{print_board_info, start_tasks, CtrlTask, ZbusRun, DBUS_NAME};
+use asusd::{print_board_info, start_tasks, CtrlTask, Reloadable, ZbusRun, DBUS_NAME};
 use config_traits::{StdConfig, StdConfigLoad2};
-use log::{error, info};
+use log::{error, info, warn};
 use rog_platform::asus_armoury::FirmwareAttributes;
 use rog_platform::platform::RogPlatform;
 use rog_platform::power::AsusPower;
@@ -95,17 +95,23 @@ async fn start_daemon() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    match CtrlFanCurveZbus::new() {
-        Ok(ctrl) => {
+    let fan_curve_config = match CtrlFanCurveZbus::new() {
+        Ok(mut ctrl) => {
             info!("FanCurves: found supported fancurves");
-            let sig_ctx = CtrlFanCurveZbus::signal_context(&server)?;
-            start_tasks(ctrl, &mut server, sig_ctx).await?;
+            ctrl.set_platform_refs(config.clone(), power.clone());
+            let fc_config = Some(ctrl.config());
+            ctrl.reload()
+                .await
+                .unwrap_or_else(|err| warn!("FanCurves reload: {}", err));
+            ctrl.add_to_server(&mut server).await;
             info!("FanCurves: initialized");
+            fc_config
         }
         Err(err) => {
             error!("FanCurves: {}", err);
+            None
         }
-    }
+    };
 
     match CtrlBacklight::new(config.clone()) {
         Ok(backlight) => {
@@ -128,6 +134,7 @@ async fn start_daemon() -> Result<(), Box<dyn Error>> {
         CtrlPlatform::signal_context(&server)?,
         server.clone(),
         armoury_registry,
+        fan_curve_config,
     ) {
         Ok(ctrl) => {
             info!("CtrlPlatform: initialized");

@@ -19,6 +19,7 @@ use crate::asus_armoury::{set_config_or_default, ArmouryAttributeRegistry};
 use crate::config::Config;
 use crate::error::RogError;
 use crate::{task_watch_item, CtrlTask, ReloadAndNotify};
+use rog_profiles::find_fan_curve_node;
 
 const PLATFORM_ZBUS_PATH: &str = "/xyz/ljones";
 
@@ -50,6 +51,7 @@ pub struct CtrlPlatform {
     config: Arc<Mutex<Config>>,
     connection: Connection,
     armoury_registry: ArmouryAttributeRegistry,
+    fan_curve_config: Option<Arc<Mutex<crate::ctrl_fancurves::FanCurveConfig>>>,
 }
 
 impl CtrlPlatform {
@@ -63,6 +65,7 @@ impl CtrlPlatform {
         signal_context: SignalEmitter<'static>,
         connection: Connection,
         armoury_registry: ArmouryAttributeRegistry,
+        fan_curve_config: Option<Arc<Mutex<crate::ctrl_fancurves::FanCurveConfig>>>,
     ) -> Result<Self, RogError> {
         let config1 = config.clone();
         let config_path = config_path.to_owned();
@@ -77,6 +80,7 @@ impl CtrlPlatform {
                 .ok(),
             connection,
             armoury_registry,
+            fan_curve_config,
         };
         let mut inotify_self = ret_self.clone();
 
@@ -148,6 +152,34 @@ impl CtrlPlatform {
                 .ok();
             self.config.lock().await.write();
         }
+    }
+
+    /// Re-apply fan curves for the given profile, then write PPT values.
+    /// Fan curves must be applied first because PPT writes require the EC
+    /// to be in Manual fan mode (FANM=4), which is set by fan curve writes.
+    async fn apply_fan_curves_and_ppt(
+        &self,
+        attrs: &FirmwareAttributes,
+        power_plugged: bool,
+        profile: PlatformProfile,
+    ) {
+        if let Some(ref fc_config) = self.fan_curve_config {
+            let mut fc = fc_config.lock().await;
+            if let Ok(mut device) = find_fan_curve_node() {
+                fc.profiles
+                    .write_profile_curve_to_platform(profile, &mut device)
+                    .map_err(|e| warn!("Failed to re-apply fan curves: {e}"))
+                    .ok();
+            }
+            fc.current = profile;
+        }
+        set_config_or_default(
+            attrs,
+            &mut *self.config.lock().await,
+            power_plugged,
+            profile,
+        )
+        .await;
     }
 
     async fn run_ac_or_bat_cmd(&self, power_plugged: bool) {
@@ -846,16 +878,13 @@ impl CtrlTask for CtrlPlatform {
                                     platform1.platform.get_platform_profile().map(|p| p.into())
                                 {
                                     let attrs = FirmwareAttributes::new();
-                                    {
-                                        let mut cfg = platform1.config.lock().await;
-                                        set_config_or_default(
+                                    platform1
+                                        .apply_fan_curves_and_ppt(
                                             &attrs,
-                                            &mut cfg,
                                             power_plugged > 0,
                                             profile,
                                         )
                                         .await;
-                                    }
                                     if let Err(e) = platform1
                                         .armoury_registry
                                         .emit_limits(&platform1.connection)
@@ -927,10 +956,9 @@ impl CtrlTask for CtrlPlatform {
                     {
                         // TODO: manage this better, shouldn't need to create every time
                         let attrs = FirmwareAttributes::new();
-                        {
-                            let mut cfg = platform3.config.lock().await;
-                            set_config_or_default(&attrs, &mut cfg, power_plugged, profile).await;
-                        }
+                        platform3
+                            .apply_fan_curves_and_ppt(&attrs, power_plugged, profile)
+                            .await;
                         if let Err(e) = platform3
                             .armoury_registry
                             .emit_limits(&platform3.connection)
@@ -987,13 +1015,8 @@ impl CtrlTask for CtrlPlatform {
                                 e
                             })
                             .unwrap_or_default();
-                        set_config_or_default(
-                            &attrs,
-                            &mut *ctrl.config.lock().await,
-                            power_plugged == 1,
-                            profile,
-                        )
-                        .await;
+                        ctrl.apply_fan_curves_and_ppt(&attrs, power_plugged == 1, profile)
+                            .await;
                         if let Err(e) = ctrl.armoury_registry.emit_limits(&ctrl.connection).await {
                             error!("Failed to emit armoury updates after profile change: {e:?}");
                         }
