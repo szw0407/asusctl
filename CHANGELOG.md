@@ -11,6 +11,7 @@
 - Start asusd when dmi contains ASUSLaptop: thanks @CongLuanTran
 - Fix packet size for aura: thanks @sikuthenomad
 - Fix DESTDIR handling in Makefile: thanks @martin-flaska
+- Prevent setting custom TDP without a custom fan curve: thanks @Ghoul4500
 
 ## [6.3.7]
 
