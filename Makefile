@@ -18,7 +18,7 @@ BIN_S := asus-shutdown
 BIN_U := asusd-user
 LEDCFG := aura_support.ron
 
-DESTDIR_REALPATH = $(shell realpath $(DESTDIR))
+DESTDIR_REALPATH := $(if $(DESTDIR),$(shell realpath $(DESTDIR)),)
 
 SRC := Cargo.toml Cargo.lock Makefile $(shell find -type f -wholename '**/src/*.rs')
 
