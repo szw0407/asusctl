@@ -270,8 +270,7 @@ impl AnimeImage {
             // 33.0 = Longest row LED count (physical) plus half-pixel offset
             AnimeType::GA401 => (33.0 + 0.5) * Self::scale_x(anime_type),
             AnimeType::GU604 => (38.0 + 0.5) * Self::scale_x(anime_type),
-            AnimeType::G635L => (33.0 + 0.5) * Self::scale_x(anime_type),
-            AnimeType::G835L => (33.0 + 0.5) * Self::scale_x(anime_type),
+            AnimeType::G635L | AnimeType::G835L => (33.0 + 0.5) * Self::scale_x(anime_type),
             _ => (35.0 + 0.5) * Self::scale_x(anime_type),
         }
     }
@@ -281,8 +280,7 @@ impl AnimeImage {
         match anime_type {
             AnimeType::GA401 => 55,
             AnimeType::GU604 => 62,
-            AnimeType::G635L => 68,
-            AnimeType::G835L => 68,
+            AnimeType::G635L | AnimeType::G835L => 68,
             _ => 61,
         }
     }
@@ -293,8 +291,7 @@ impl AnimeImage {
             // 54.0 = End column LED count (physical) plus one dead pixel
             AnimeType::GA401 => (54.0 + 1.0) * Self::scale_y(anime_type),
             AnimeType::GU604 => 62.0 * Self::scale_y(anime_type),
-            AnimeType::G635L => 68.0 * Self::scale_y(anime_type),
-            AnimeType::G835L => 68.0 * Self::scale_y(anime_type),
+            AnimeType::G635L | AnimeType::G835L => 68.0 * Self::scale_y(anime_type),
             // GA402 may not have dead pixels and require only the physical LED count
             _ => 61.0 * Self::scale_y(anime_type),
         }

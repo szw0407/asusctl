@@ -146,8 +146,7 @@ impl AnimeDiagonal {
         match anime_type {
             AnimeType::GA401 => self.to_ga401_packets(),
             AnimeType::GU604 => self.to_gu604_packets(),
-            AnimeType::G635L => self.to_g635l_packets(),
-            AnimeType::G835L => self.to_g835l_packets(),
+            AnimeType::G635L | AnimeType::G835L => self.to_strix_packets(anime_type),
             _ => self.to_ga402_packets(),
         }
     }
@@ -465,20 +464,12 @@ impl AnimeDiagonal {
         debug!("STRIX packing complete: {} bytes written", buf_idx);
     }
 
-    /// G635L diagonal packing — STRIX-class LED ordering, G635L buffer size.
-    /// Kept separate from `to_g835l_packets` so G635L behavior can evolve
-    /// (e.g. when calibration items A and B from the cross-repo handoff
-    /// produce a G635L-specific simulator map) without touching G835L.
-    fn to_g635l_packets(&self) -> Result<AnimeDataBuffer> {
-        let mut buf = vec![0u8; AnimeType::G635L.data_length()];
+    /// STRIX-class diagonal packing (G635L, G835L). Caller passes the
+    /// concrete `AnimeType` so the resulting `AnimeDataBuffer` carries
+    /// the right device identity downstream.
+    fn to_strix_packets(&self, anime_type: AnimeType) -> Result<AnimeDataBuffer> {
+        let mut buf = vec![0u8; anime_type.data_length()];
         Self::pack_strix_diagonal_into(&mut buf, &self.1);
-        AnimeDataBuffer::from_vec(AnimeType::G635L, buf)
-    }
-
-    /// G835L diagonal packing — unchanged behavior, now via shared helper.
-    fn to_g835l_packets(&self) -> Result<AnimeDataBuffer> {
-        let mut buf = vec![0u8; AnimeType::G835L.data_length()];
-        Self::pack_strix_diagonal_into(&mut buf, &self.1);
-        AnimeDataBuffer::from_vec(AnimeType::G835L, buf)
+        AnimeDataBuffer::from_vec(anime_type, buf)
     }
 }
