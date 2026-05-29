@@ -54,6 +54,12 @@ RestrictNamespaces=true
 RestrictRealtime=true
 RestrictSUIDSGID=true
 
+# Create /etc/asusd (root, 0755) before namespacing so the hardened unit does
+# not fail 226/NAMESPACE on fresh source installs where the dir is not present.
+# This only creates the dir read-only; ReadWritePaths below grants the write
+# access the daemon needs to persist its config.
+ConfigurationDirectory=asusd
+
 ReadOnlyPaths=/
 ReadWritePaths=/etc/asusd/
 ReadWritePaths=/sys/

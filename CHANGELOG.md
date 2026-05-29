@@ -12,6 +12,7 @@
 - Fix packet size for aura: thanks @sikuthenomad
 - Fix DESTDIR handling in Makefile: thanks @martin-flaska
 - Prevent setting custom TDP without a custom fan curve: thanks @Ghoul4500
+- Fix `asusd.service` failing 226/NAMESPACE on fresh source installs by creating `/etc/asusd` before namespacing: thanks @scottishwidow
 
 ## [6.3.7]
 
