@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changes
+
+- Fix `asusd.service` failing 226/NAMESPACE on fresh source installs by creating `/etc/asusd` before namespacing: thanks @scottishwidow
+
 ## [6.3.7]
 
 ### Changes
