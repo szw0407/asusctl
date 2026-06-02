@@ -9,6 +9,10 @@ but can also be used with non-asus laptops with reduced features.
 
 Now includes a GUI, `rog-control-center`.
 
+# OGC Migration
+
+This project has been migrated to the [OGC](https://github.com/opengamingcollective) on [GitHub](https://github.com/opengamingcollective/asusctl) and future development will happen there.
+
 ## Kernel support
 
 Due to on-going driver work the minimum suggested kernel version is always **the latest*, as improvements and fixes are continuous.
