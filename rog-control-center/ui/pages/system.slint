@@ -1,5 +1,6 @@
 import { SystemSlider, SystemDropdown, SystemToggle, SystemToggleInt, RogItem } from "../widgets/common.slint";
 import { Palette, HorizontalBox , VerticalBox, ScrollView, Slider, Button, Switch, ComboBox, GroupBox, StandardButton} from "std-widgets.slint";
+import { FanPageData } from "../types/fan_types.slint";
 
 export struct AttrMinMax {
   min: int,
@@ -151,6 +152,21 @@ export global SystemPageData {
 export component PageSystem inherits Rectangle {
     property <bool> show_fade_cover: false;
     property <bool> show_throttle_advanced: false;
+    // Resolve the active platform profile enum value (Balanced=0, Performance=1,
+    // Quiet=2, LowPower=3, Custom=4) from the dropdown index, guarding against
+    // an unresolved -1 index during initial setup.
+    property <int> active_profile_value:
+        (SystemPageData.platform_profile >= 0 && SystemPageData.platform_profile < SystemPageData.platform_profile_indexes.length)
+            ? SystemPageData.platform_profile_indexes[SystemPageData.platform_profile]
+            : -1;
+    // The kernel enables custom fan-curve mode only when at least one fan's
+    // enabled flag is true for the active profile. Mirror that check so the
+    // PPT controls track the kernel's gating.
+    property <bool> fan_curve_active:
+        (active_profile_value == 0 && (FanPageData.balanced_cpu_enabled || FanPageData.balanced_gpu_enabled || FanPageData.balanced_mid_enabled)) ||
+        (active_profile_value == 1 && (FanPageData.performance_cpu_enabled || FanPageData.performance_gpu_enabled || FanPageData.performance_mid_enabled)) ||
+        ((active_profile_value == 2 || active_profile_value == 3) && (FanPageData.quiet_cpu_enabled || FanPageData.quiet_gpu_enabled || FanPageData.quiet_mid_enabled));
+    property <bool> ppt_unlocked: fan_curve_active;
     clip: true;
 
     ScrollView {
@@ -346,6 +362,7 @@ export component PageSystem inherits Rectangle {
                 if !SystemPageData.ppt_enabled_available: Switch {
                     text: @tr("ppt_group_enabled" => "Enable Tuning");
                     checked <=> SystemPageData.enable_ppt_group;
+                    enabled: ppt_unlocked;
                     toggled => {
                         SystemPageData.cb_enable_ppt_group(SystemPageData.enable_ppt_group)
                     }
@@ -353,9 +370,24 @@ export component PageSystem inherits Rectangle {
                 if SystemPageData.ppt_enabled_available: Switch {
                     text: @tr("ppt_group_enabled" => "Enable Tuning");
                     checked <=> SystemPageData.ppt_enabled;
+                    enabled: ppt_unlocked;
                     toggled => {
                         SystemPageData.enable_ppt_group = self.checked;
                         SystemPageData.cb_ppt_enabled(SystemPageData.ppt_enabled)
+                    }
+                }
+            }
+
+            if !fan_curve_active: Rectangle {
+                background: #665500;
+                max-height: 30px;
+                VerticalBox {
+                    Text {
+                        text: @tr("requires_fan_curve_warning" => "CPU power limits require an active custom fan curve. Enable a fan curve for the active profile in the Fans tab to unlock these controls.");
+                        font-size: 14px;
+                        color: white;
+                        horizontal-alignment: TextHorizontalAlignment.center;
+                        wrap: word-wrap;
                     }
                 }
             }
@@ -367,7 +399,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_pl1_spl.min;
                 maximum: SystemPageData.ppt_pl1_spl.max;
                 value: SystemPageData.ppt_pl1_spl.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_pl1_spl();
@@ -385,7 +417,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_pl2_sppt.min;
                 maximum: SystemPageData.ppt_pl2_sppt.max;
                 value: SystemPageData.ppt_pl2_sppt.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_pl2_sppt();
@@ -403,7 +435,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_pl3_fppt.min;
                 maximum: SystemPageData.ppt_pl3_fppt.max;
                 value: SystemPageData.ppt_pl3_fppt.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_pl3_fppt();
@@ -420,7 +452,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_fppt.min;
                 maximum: SystemPageData.ppt_fppt.max;
                 value: SystemPageData.ppt_fppt.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_fppt();
@@ -438,7 +470,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_apu_sppt.min;
                 maximum: SystemPageData.ppt_apu_sppt.max;
                 value: SystemPageData.ppt_apu_sppt.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_apu_sppt();
@@ -456,7 +488,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.ppt_platform_sppt.min;
                 maximum: SystemPageData.ppt_platform_sppt.max;
                 value: SystemPageData.ppt_platform_sppt.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_ppt_platform_sppt();
@@ -474,7 +506,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.nv_dynamic_boost.min;
                 maximum: SystemPageData.nv_dynamic_boost.max;
                 value: SystemPageData.nv_dynamic_boost.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_nv_dynamic_boost();
@@ -492,7 +524,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.nv_tgp.min;
                 maximum: SystemPageData.nv_tgp.max;
                 value: SystemPageData.nv_tgp.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_nv_tgp();
@@ -510,7 +542,7 @@ export component PageSystem inherits Rectangle {
                 minimum: SystemPageData.nv_temp_target.min;
                 maximum: SystemPageData.nv_temp_target.max;
                 value: SystemPageData.nv_temp_target.current;
-                enabled <=> SystemPageData.enable_ppt_group;
+                enabled: SystemPageData.enable_ppt_group && ppt_unlocked;
                 has_reset: true;
                 cb_do_reset => {
                     SystemPageData.cb_default_nv_temp_target();

@@ -146,7 +146,7 @@ impl AnimeDiagonal {
         match anime_type {
             AnimeType::GA401 => self.to_ga401_packets(),
             AnimeType::GU604 => self.to_gu604_packets(),
-            AnimeType::G635L => self.to_g835l_packets(), // TODO: Verify with G635L model
+            AnimeType::G635L => self.to_g635l_packets(),
             AnimeType::G835L => self.to_g835l_packets(),
             _ => self.to_ga402_packets(),
         }
@@ -384,28 +384,34 @@ impl AnimeDiagonal {
         AnimeDataBuffer::from_vec(crate::AnimeType::GA402, buf)
     }
 
-    /// G835L diagonal packing - inverted geometry (rows grow then constant)
-    /// Triangle (rows 0-27): pairs grow from 1→14 LEDs
-    /// Rectangle (rows 28-67): constant 15 LEDs
+    /// Pack a STRIX-class image into the LED-ordered byte buffer.
     ///
-    /// Diagonal PNG layout for G835L:
+    /// G635L and G835L share the same physical LED layout (inverted
+    /// staggered matrix: rows 0-27 grow from 1→14 LEDs in pairs, rows
+    /// 28-67 stay at 15 LEDs). This helper holds that ordering logic;
+    /// per-device behaviors (buffer size, USB packet chunking) live in
+    /// the callers.
+    ///
+    /// Per G Helper's `AnimeMatrixDevice` (STRIX class):
+    ///   https://github.com/seerge/g-helper/blob/main/app/AnimeMatrix/AnimeMatrixDevice.cs
+    ///
+    /// Diagonal PNG layout:
     /// - Image height = 34 (row pairs)
     /// - Image width  = 68 (half-step X grid)
     /// - Even/odd rows are interleaved in X (staggered by 0.5 LED = 1 px)
-    fn to_g835l_packets(&self) -> Result<AnimeDataBuffer> {
+    fn pack_strix_diagonal_into(buf: &mut [u8], image: &[Vec<u8>]) {
         use log::debug;
 
-        let mut buf = vec![0u8; AnimeType::G835L.data_length()];
         let mut buf_idx = 0usize;
 
         debug!(
-            "G835L packing: image dimensions {}x{}, buffer size {}",
-            self.1.first().map(|r| r.len()).unwrap_or(0),
-            self.1.len(),
+            "STRIX packing: image dimensions {}x{}, buffer size {}",
+            image.first().map(|r| r.len()).unwrap_or(0),
+            image.len(),
             buf.len()
         );
 
-        // Helper: get row length for G835L
+        // Helper: get row length for STRIX class (G635L/G835L)
         fn row_length(row: usize) -> usize {
             if row < 28 {
                 row / 2 + 1
@@ -435,8 +441,8 @@ impl AnimeDiagonal {
                 let img_x = (base_x + i) * 2 + stagger;
 
                 // Read from image, clamp to bounds
-                let val = if img_y < self.1.len() && img_x < self.1[img_y].len() {
-                    self.1[img_y][img_x]
+                let val = if img_y < image.len() && img_x < image[img_y].len() {
+                    image[img_y][img_x]
                 } else {
                     0
                 };
@@ -456,7 +462,23 @@ impl AnimeDiagonal {
             }
         }
 
-        debug!("G835L packing complete: {} bytes written", buf_idx);
+        debug!("STRIX packing complete: {} bytes written", buf_idx);
+    }
+
+    /// G635L diagonal packing — STRIX-class LED ordering, G635L buffer size.
+    /// Kept separate from `to_g835l_packets` so G635L behavior can evolve
+    /// (e.g. when calibration items A and B from the cross-repo handoff
+    /// produce a G635L-specific simulator map) without touching G835L.
+    fn to_g635l_packets(&self) -> Result<AnimeDataBuffer> {
+        let mut buf = vec![0u8; AnimeType::G635L.data_length()];
+        Self::pack_strix_diagonal_into(&mut buf, &self.1);
+        AnimeDataBuffer::from_vec(AnimeType::G635L, buf)
+    }
+
+    /// G835L diagonal packing — unchanged behavior, now via shared helper.
+    fn to_g835l_packets(&self) -> Result<AnimeDataBuffer> {
+        let mut buf = vec![0u8; AnimeType::G835L.data_length()];
+        Self::pack_strix_diagonal_into(&mut buf, &self.1);
         AnimeDataBuffer::from_vec(AnimeType::G835L, buf)
     }
 }

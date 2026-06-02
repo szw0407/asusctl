@@ -90,6 +90,9 @@ pub fn setup_gpu_page(ui: &MainWindow) {
             global.set_dgpu_disabled(if dgpu_disabled { 1 } else { 0 });
             global.set_gpu_mux_mode(initial_index);
 
+            // Disable dropdown initially if `dgpu_disable` attribute is not exposed by asusd
+            global.set_gpu_dropdown_enabled(dgpu_attr.is_some());
+
             let handle_cb = handle_copy.clone();
             let dgpu_attr = dgpu_attr.clone();
             let mux_attr = mux_attr.clone();
