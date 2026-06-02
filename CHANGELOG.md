@@ -13,6 +13,9 @@
 - Fix DESTDIR handling in Makefile: thanks @martin-flaska
 - Prevent setting custom TDP without a custom fan curve: thanks @Ghoul4500
 - Fix `asusd.service` failing 226/NAMESPACE on fresh source installs by creating `/etc/asusd` before namespacing: thanks @scottishwidow
+- Add support for 614ji, thanks @lucaszf
+- Add support for GA403WR, thanks @ldcanetti94
+- Add support for G614PR, thanks @scardracs
 
 ## [6.3.7]
 
