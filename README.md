@@ -15,9 +15,9 @@ This project has been migrated to the [OGC](https://github.com/opengamingcollect
 
 ## Kernel support
 
-Due to on-going driver work the minimum suggested kernel version is always **the latest*, as improvements and fixes are continuous.
+Due to ongoing driver work, the minimum suggested kernel version is always **the latest*, as improvements and fixes are continuous.
 
-Support for TDP is tied to the new asus-armoury driver: available mainline since linux 6.19: everything older is not supported.
+Support for TDP is tied to the new asus-armoury driver: available mainline since Linux 6.19: everything older is not supported.
 
 ## X11 support
 
@@ -25,12 +25,12 @@ X11 is not supported at all, as in I will not help you with X11 issues if there 
 
 ## Goals
 
-The main goal of this work is to provide a safe and easy to use abstraction over various laptop features via DBUS, and to provide some helpful defaults and other behaviour such as toggling throttle/profile on AC/battery change.
+The main goal of this work is to provide a safe and easy to use abstraction over various laptop features via D-Bus, and to provide some helpful defaults and other behaviour such as toggling throttle/profile on AC/battery change.
 
-1. Provide safe dbus interface
+1. Provide safe D-Bus interface
 2. Respect the users resources: be small, light, and fast
 
-Point 4? asusd currently uses a tiny fraction of cpu time, and less than 1Mb of ram, the way
+Point 4: asusd currently uses a tiny fraction of cpu time, and less than 1MB of RAM, the way
 a system-level daemon should. Languages such as JS and python should never be used for system level daemons (please stop).
 
 ## Keyboard LEDs
@@ -59,7 +59,7 @@ Bus 003 Device 002: ID 0b05:19b6 ASUSTek Computer, Inc. [unknown]
 ```
 
 then it may work without tweaks. Technically all other functions except the LED
-and AniMe parts should work regardless of your latop make.
+and AniMe parts should work regardless of your laptop make.
 
 ## Implemented
 
@@ -80,7 +80,7 @@ The list is a bit outdated as many features have been enabled in the Linux kerne
 
 A gui is now in the repo - ROG Control Center. At this time it is still a WIP, but it has almost all features in place already.
 
-**NOTE**: Xorg is not supported.
+**NOTE**: X11 is not supported.
 
 ## BUILDING
 
@@ -107,9 +107,9 @@ make
 sudo make install
 ```
 
-**Debian(unsuported):**
+**Debian (unsupported):**
 
-officially unsuported,but you can still try and test it by yourself(some features may not be available).
+officially unsupported,but you can still try and test it by yourself (some features may not be available).
 
 ```sh
 sudo apt install libclang-dev libudev-dev libfontconfig-dev build-essential cmake libxkbcommon-dev
@@ -118,7 +118,7 @@ make
 sudo make install
 ```
 
-**Ubuntu, Popos (unsuported):**
+**Ubuntu, Pop!_OS (unsupported):**
 
 ```sh
 sudo apt install make cargo gcc pkg-config openssl libasound2-dev cmake build-essential python3 libfreetype6-dev libexpat1-dev libxcb-composite0-dev libssl-dev libx11-dev libfontconfig1-dev curl libclang-dev libudev-dev checkinstall libseat-dev libinput-dev libxkbcommon-dev libgbm-dev
@@ -157,7 +157,7 @@ See `CONTRIBUTING.md`. Additionally, also do `cargo clean` and `cargo test` on f
 
 Generation of the bindings with `make bindings` requires `typeshare` to be installed.
 
-Dbus introsepction XML requires with `make introspection` requires `anime_sim` to be running before starting `asusd`.
+D-Bus introspection XML requires with `make introspection` requires `anime_sim` to be running before starting `asusd`.
 
 ## OTHER
 
