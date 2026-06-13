@@ -248,7 +248,8 @@ export component SystemDropdown inherits RogItem {
     in-out property <string> current_value;
     in-out property <[string]> model;
     in property <bool> enabled: true;
-    in property <length> combo_min_width: 0px;
+    // mirrors the fluent ComboBox default; raise it to widen a specific dropdown
+    in property <length> combo_min_width: 160px;
     callback selected(int);
     HorizontalLayout {
         HorizontalLayout {
