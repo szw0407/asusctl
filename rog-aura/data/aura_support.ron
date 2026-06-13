@@ -465,7 +465,7 @@
         basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Pulse],
         basic_zones: [],
         advanced_type: r#None,
-        power_zones: [Keyboard],
+        power_zones: [Keyboard, Lightbar],
     ),
     (
         device_name: "G712LV",
@@ -474,7 +474,7 @@
         basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Pulse],
         basic_zones: [Key1, Key2, Key3, Key4],
         advanced_type: r#None,
-        power_zones: [Keyboard],
+        power_zones: [Keyboard, Lightbar],
     ),
     (
         device_name: "G712LW",
@@ -483,7 +483,7 @@
         basic_modes: [Static, Breathe, RainbowCycle, RainbowWave, Pulse],
         basic_zones: [Key1, Key2, Key3, Key4],
         advanced_type: r#None,
-        power_zones: [Keyboard],
+        power_zones: [Keyboard, Lightbar],
     ),
     (
         device_name: "G713IC",
