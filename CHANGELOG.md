@@ -5,7 +5,7 @@
 ### Changes
 
 - Added auto-upload hook: thanks @ayush123460
-
+- Added Mini-LED Multi-zone Strong support: thanks @Ghoul4500
 
 ## [6.3.8]
 
