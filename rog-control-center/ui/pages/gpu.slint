@@ -4,12 +4,9 @@ import { SystemToggle, SystemDropdown } from "../widgets/common.slint";
 import { Profile, FanType, FanPageData } from "../types/fan_types.slint";
 
 export global GPUPageData {
-    // GPU mode and device state
-    in-out property <int> gpu_mux_mode: 1; // 0 = Ultra/Discreet, 1 = Integrated/Optimus
-    in-out property <int> dgpu_disabled: 0; // 1 == dGPU disabled
-    in-out property <int> egpu_enabled: 0; // 1 == eGPU (XGMobile) enabled
-    in-out property <[string]> gpu_modes_choises: [@tr("Integrated"), @tr("Hybrid")];
-    in-out property <bool> gpu_mux_available: false;
+    in-out property <int> gpu_mode_index: 0; // index into gpu_modes
+    in-out property <[string]> gpu_modes: []; // available modes, in display order
+    in-out property <bool> gpu_switchable: false; // false when no GPU switch exists
     in-out property <bool> gpu_dropdown_enabled: true; // false when GPU switch is in progress
     callback cb_set_gpu_mode(int);
 }
@@ -36,7 +33,16 @@ export component PageGPU inherits Rectangle {
                 }
             }
 
-            HorizontalLayout {
+            if !GPUPageData.gpu_switchable: HorizontalLayout {
+                padding-right: 10px;
+                padding-left: 10px;
+                Text {
+                    font-size: 16px;
+                    text: @tr("This device has no switchable GPU.");
+                }
+            }
+
+            if GPUPageData.gpu_switchable: HorizontalLayout {
                 padding-right: 10px;
                 padding-left: 10px;
                 alignment: LayoutAlignment.space-between;
@@ -49,15 +55,15 @@ export component PageGPU inherits Rectangle {
                 }
             }
 
-            HorizontalLayout {
+            if GPUPageData.gpu_switchable: HorizontalLayout {
                 SystemDropdown {
                     text: @tr("GPU mode");
-                    model <=> GPUPageData.gpu_modes_choises;
-                    current_index <=> GPUPageData.gpu_mux_mode;
-                    current_value: GPUPageData.gpu_modes_choises[GPUPageData.gpu_mux_mode];
+                    model <=> GPUPageData.gpu_modes;
+                    current_index <=> GPUPageData.gpu_mode_index;
+                    current_value: GPUPageData.gpu_modes[GPUPageData.gpu_mode_index];
                     enabled <=> GPUPageData.gpu_dropdown_enabled;
                     selected => {
-                        GPUPageData.cb_set_gpu_mode(GPUPageData.gpu_mux_mode)
+                        GPUPageData.cb_set_gpu_mode(GPUPageData.gpu_mode_index)
                     }
                 }
             }
