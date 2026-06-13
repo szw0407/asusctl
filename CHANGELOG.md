@@ -7,6 +7,7 @@
 - Added auto-upload hook: thanks @ayush123460
 - Added Mini-LED Multi-zone Strong support: thanks @Ghoul4500
 - Add aura support for multiple FX608 models: thanks @dmitthedazed
+- Add aura support for GA403UM: thans @COOORN
 
 ## [6.3.8]
 
