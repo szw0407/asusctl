@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.9]
+
+### Changes
+
+- Added auto-upload hook: thanks @ayush123460
+
+
 ## [6.3.8]
 
 ### Changes
