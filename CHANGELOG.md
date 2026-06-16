@@ -9,6 +9,7 @@
 - Add aura support for multiple FX608 models: thanks @dmitthedazed
 - Add aura support for GA403UM: thans @COOORN
 - Add lightbar control to G712L models: thanks @trmdnt
+- Fix issue when detachable gear is disconnected
 
 ## [6.3.8]
 
