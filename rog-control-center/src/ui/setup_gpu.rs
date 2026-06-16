@@ -205,7 +205,7 @@ pub fn setup_gpu_page(ui: &MainWindow) {
         }
 
         // --- XG Mobile LED ---
-        let xgm_results: Option<(XgmLedProxy<'static>, bool)> = (|| async {
+        let xgm_results: Option<(XgmLedProxy<'static>, bool)> = async {
             let Ok(mut proxies) = find_iface_async::<XgmLedProxy>("xyz.ljones.XgmLed").await else {
                 error!("setup_gpu: no XG Mobile LED interface");
                 return None;
@@ -213,7 +213,7 @@ pub fn setup_gpu_page(ui: &MainWindow) {
             let xgm_proxy = proxies.pop()?;
             let enabled = xgm_proxy.xgm_led_enabled().await.unwrap_or(false);
             Some((xgm_proxy, enabled))
-        })()
+        }
         .await;
         if let Some((xgm_proxy, enabled)) = xgm_results {
             let handle_xgm = handle.clone();
