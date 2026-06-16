@@ -144,13 +144,18 @@ pub fn setup_aura_page(
                         {
                             pow3r.push(PowerZones::KeyboardAndLightbar);
                         }
+                        pow3r.retain(|z| *z != PowerZones::None);
                         let n: Vec<SharedString> =
                             pow3r.iter().map(|z| names[(*z) as usize].clone()).collect();
                         handle
                             .global::<AuraPageData>()
                             .set_power_zone_names_old(n.as_slice().into());
                     } else {
-                        let p: Vec<SlintPowerZones> = pow3r.iter().map(|z| (*z).into()).collect();
+                        let p: Vec<SlintPowerZones> = pow3r
+                            .iter()
+                            .filter(|z| **z != PowerZones::None)
+                            .map(|z| (*z).into())
+                            .collect();
                         handle
                             .global::<AuraPageData>()
                             .set_supported_power_zones(p.as_slice().into());
