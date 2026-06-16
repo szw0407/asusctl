@@ -139,11 +139,6 @@ pub fn setup_aura_page(
                         .iter()
                         .collect();
                     if dev.is_old_laptop() {
-                        if pow3r.contains(&PowerZones::Keyboard)
-                            && pow3r.contains(&PowerZones::Lightbar)
-                        {
-                            pow3r.push(PowerZones::KeyboardAndLightbar);
-                        }
                         pow3r.retain(|z| *z != PowerZones::None);
                         let n: Vec<SharedString> =
                             pow3r.iter().map(|z| names[(*z) as usize].clone()).collect();

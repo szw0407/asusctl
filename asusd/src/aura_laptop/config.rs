@@ -410,11 +410,21 @@ mod tests {
                 direction: Direction::Right
             }
         );
-        assert_eq!(config.enabled.states.len(), 1);
+        assert_eq!(config.enabled.states.len(), 2);
         assert_eq!(
             config.enabled.states[0],
             AuraPowerState {
-                zone: PowerZones::KeyboardAndLightbar,
+                zone: PowerZones::Keyboard,
+                boot: true,
+                awake: true,
+                sleep: true,
+                shutdown: true
+            }
+        );
+        assert_eq!(
+            config.enabled.states[1],
+            AuraPowerState {
+                zone: PowerZones::Lightbar,
                 boot: true,
                 awake: true,
                 sleep: true,

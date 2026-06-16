@@ -200,19 +200,14 @@ impl LaptopAuraPower {
                 Self { states }
             }
             AuraDeviceType::LaptopKeyboardPre2021 => {
-                // The older devices are tri-state if have lightbar:
-                // 1. Keyboard
-                // 2. Lightbar
-                // 3. KeyboardAndLightbar
-                if support_data.power_zones.contains(&PowerZones::Lightbar) {
-                    Self {
-                        states: vec![AuraPowerState::default_for(PowerZones::KeyboardAndLightbar)],
-                    }
-                } else {
-                    Self {
-                        states: vec![AuraPowerState::default_for(PowerZones::Keyboard)],
-                    }
+                // Create individual power states for each power zone.
+                // Previously this collapsed Keyboard+Lightbar into a single
+                // KeyboardAndLightbar zone, which prevented independent control.
+                let mut states = Vec::new();
+                for zone in support_data.power_zones.iter() {
+                    states.push(AuraPowerState::default_for(*zone))
                 }
+                Self { states }
             }
             AuraDeviceType::LaptopKeyboardTuf => Self {
                 states: vec![AuraPowerState::default_for(PowerZones::Keyboard)],
