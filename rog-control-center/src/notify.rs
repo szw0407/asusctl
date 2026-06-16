@@ -11,9 +11,9 @@ use std::time::Duration;
 
 use log::{debug, error, info, warn};
 use notify_rust::{Hint, Notification, Timeout};
+use rog_platform::gpu_pci::GfxPower;
 use rog_platform::power::AsusPower;
 use serde::{Deserialize, Serialize};
-use supergfxctl::pci_device::GfxPower;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
@@ -41,7 +41,7 @@ impl Default for EnabledNotifications {
 }
 
 fn start_dpu_status_mon(config: Arc<Mutex<Config>>) {
-    use supergfxctl::pci_device::Device;
+    use rog_platform::gpu_pci::Device;
     let dev = Device::find().unwrap_or_default();
     let mut found_dgpu = false; // just for logging
     for dev in dev {

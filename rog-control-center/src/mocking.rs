@@ -2,13 +2,13 @@ use std::collections::BTreeMap;
 
 use rog_aura::usb::{AuraDevRog2, AuraDevice, AuraPowerDev};
 use rog_aura::{AuraEffect, AuraModeNum, AuraZone};
+use rog_platform::gpu_pci::GfxPower;
 use rog_platform::platform::GpuMode;
 use rog_platform::supported::{
     AdvancedAura, AnimeSupportedFunctions, ChargeSupportedFunctions, LedSupportedFunctions,
     PlatformProfileFunctions, RogBiosSupportedFunctions, SupportedFunctions,
 };
 use rog_profiles::fan_curve_set::{CurveData, FanCurveSet};
-use supergfxctl::pci_device::{GfxMode, GfxPower};
 
 use crate::error::Result;
 
@@ -22,10 +22,6 @@ pub struct DaemonProxyBlocking<'a> {
 impl<'a> DaemonProxyBlocking<'a> {
     pub fn new(_c: &bool) -> Result<Self> {
         Ok(Self { _phantom: NOPE })
-    }
-
-    pub fn mode(&self) -> Result<GfxMode> {
-        Ok(GfxMode::None)
     }
 
     pub fn power(&self) -> Result<GfxPower> {

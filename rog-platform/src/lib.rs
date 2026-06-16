@@ -6,6 +6,7 @@ pub mod backlight;
 pub mod cled;
 pub mod cpu;
 pub mod error;
+pub mod gpu_pci;
 pub mod hid_raw;
 pub mod keyboard_led;
 pub(crate) mod macros;

@@ -4704,9 +4704,7 @@ dependencies = [
  "serde",
  "slint",
  "slint-build",
- "supergfxctl",
  "tokio",
- "versions",
  "zbus",
 ]
 
@@ -4758,6 +4756,7 @@ dependencies = [
  "log",
  "rusb",
  "serde",
+ "serde_json",
  "udev 0.8.0",
  "zbus",
 ]
@@ -5036,6 +5035,7 @@ version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
+ "indexmap 2.14.0",
  "itoa",
  "memchr",
  "serde",
@@ -5476,22 +5476,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "supergfxctl"
-version = "5.2.7"
-source = "git+https://gitlab.com/asus-linux/supergfxctl.git#5d503b1efd41f29f77679513890807c0c0a576fe"
-dependencies = [
- "futures-util",
- "log",
- "logind-zbus",
- "serde",
- "serde_derive",
- "serde_json",
- "tokio",
- "udev 0.9.3",
- "zbus",
 ]
 
 [[package]]
@@ -6291,16 +6275,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "versions"
-version = "6.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f25d498b63d1fdb376b4250f39ab3a5ee8d103957346abacd911e2d8b612c139"
-dependencies = [
- "itertools 0.13.0",
- "nom 7.1.3",
-]
 
 [[package]]
 name = "vtable"

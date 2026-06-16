@@ -1,20 +1,19 @@
 //! A self-contained tray icon with menus.
+//!
+//! The tray icon color reflects the GPU power status, sourced from asusd's
+//! D-Bus interface (`xyz.ljones.Gpu`).
 
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Duration;
 
-use ksni::{Handle, Icon, TrayMethods};
+use ksni::{Icon, TrayMethods};
 use log::{info, warn};
 use rog_platform::platform::Properties;
-use supergfxctl::pci_device::{Device, GfxMode, GfxPower};
-use supergfxctl::zbus_proxy::DaemonProxy as GfxProxy;
-use versions::Versioning;
 
 use crate::config::Config;
-use crate::zbus_proxies::{AppState, ROGCCZbusProxyBlocking};
+use crate::zbus_proxies::{AppState, GpuStatusProxyBlocking, ROGCCZbusProxyBlocking};
 
 const TRAY_LABEL: &str = "ROG Control Center";
 const TRAY_ICON_PATH: &str = "/usr/share/icons/hicolor/512x512/apps/";
@@ -24,6 +23,7 @@ struct Icons {
     rog_red: Icon,
     rog_green: Icon,
     rog_white: Icon,
+    rog_yellow: Icon,
     gpu_integrated: Icon,
 }
 
@@ -102,56 +102,24 @@ impl ksni::Tray for AsusTray {
     }
 }
 
-async fn set_tray_icon_and_tip(
-    mode: GfxMode,
-    power: GfxPower,
-    tray: &mut Handle<AsusTray>,
-    supergfx_active: bool,
-) {
-    if let Some(icons) = ICONS.get() {
-        let icon = match power {
-            GfxPower::Suspended => icons.rog_blue.clone(),
-            GfxPower::Off => {
-                if mode == GfxMode::Vfio {
-                    icons.rog_red.clone()
-                } else {
-                    icons.rog_green.clone()
-                }
+/// Map GPU power status and mode to the appropriate tray icon and title.
+fn map_power_to_icon(power_status: &str, mode: &str, icons: &Icons) -> (Icon, String) {
+    let icon = match power_status {
+        "suspended" => icons.rog_blue.clone(),
+        "off" => {
+            if mode == "Vfio" {
+                icons.rog_yellow.clone()
+            } else {
+                icons.rog_green.clone()
             }
-            GfxPower::AsusDisabled => icons.rog_white.clone(),
-            GfxPower::AsusMuxDiscreet | GfxPower::Active => icons.rog_red.clone(),
-            GfxPower::Unknown => {
-                if supergfx_active {
-                    icons.gpu_integrated.clone()
-                } else {
-                    icons.rog_red.clone()
-                }
-            }
-        };
-
-        tray.update(|tray: &mut AsusTray| {
-            tray.current_icon = icon;
-            tray.current_title = format!(
-                "ROG: gpu mode = {mode:?}, gpu power =
-            {power:?}"
-            );
-        })
-        .await;
-    }
-}
-
-fn find_dgpu() -> Option<Device> {
-    use supergfxctl::pci_device::Device;
-    let dev = Device::find().unwrap_or_default();
-    for dev in dev {
-        if dev.is_dgpu() {
-            info!("Found dGPU: {}", dev.pci_id());
-            // Plain old thread is perfectly fine since most of this is potentially blocking
-            return Some(dev);
         }
-    }
-    warn!("Did not find a dGPU on this system, dGPU status won't be avilable");
-    None
+        "dgpu_disabled" => icons.rog_white.clone(),
+        "asus_mux_discreet" | "active" => icons.rog_red.clone(),
+        _ => icons.gpu_integrated.clone(),
+    };
+
+    let title = format!("ROG: gpu mode = {mode}, gpu power = {power_status}");
+    (icon, title)
 }
 
 /// The tray is controlled somewhat by `Arc<Mutex<SystemState>>`
@@ -169,7 +137,7 @@ pub fn init_tray(_supported_properties: Vec<Properties>, config: Arc<Mutex<Confi
         };
 
         // TODO: return an error to the UI
-        let mut tray;
+        let tray;
         match tray_init.disable_dbus_name(true).spawn().await {
             Ok(t) => tray = t,
             Err(e) => {
@@ -184,71 +152,76 @@ pub fn init_tray(_supported_properties: Vec<Properties>, config: Arc<Mutex<Confi
         let rog_blue = read_icon(&PathBuf::from("asus_notif_blue.png"));
         let rog_green = read_icon(&PathBuf::from("asus_notif_green.png"));
         let rog_white = read_icon(&PathBuf::from("asus_notif_white.png"));
+        let rog_yellow = read_icon(&PathBuf::from("asus_notif_yellow.png"));
         let gpu_integrated = read_icon(&PathBuf::from("rog-control-center.png"));
         ICONS.get_or_init(|| Icons {
             rog_blue,
             rog_red: rog_red.clone(),
             rog_green,
             rog_white,
+            rog_yellow,
             gpu_integrated,
         });
 
-        let mut has_supergfx = false;
-        let conn = zbus::Connection::system().await.unwrap();
-        if let Ok(gfx_proxy) = GfxProxy::new(&conn).await {
-            match gfx_proxy.mode().await {
-                Ok(_) => {
-                    has_supergfx = true;
-                    if let Ok(version) = gfx_proxy.version().await {
-                        if let Some(version) = Versioning::new(&version) {
-                            let curr_gfx = Versioning::new("5.2.0").unwrap();
-                            warn!("supergfxd version = {version}");
-                            if version < curr_gfx {
-                                // Don't allow mode changing if too old a version
-                                warn!("supergfxd found but is too old to use");
-                                has_supergfx = false;
-                            }
-                        }
-                    }
+        // Connect to asusd's GPU interface on the system bus
+        let sys_con = zbus::blocking::Connection::system().unwrap();
+        let gpu_proxy = match GpuStatusProxyBlocking::new(&sys_con) {
+            Ok(p) => p,
+            Err(e) => {
+                warn!(
+                    "Could not connect to asusd GPU interface: {e}. \
+                     Is asusd running?"
+                );
+                let icons = ICONS.get().unwrap();
+                tray.update(|tray: &mut AsusTray| {
+                    tray.current_icon = icons.rog_red.clone();
+                    tray.current_title = "ROG: GPU status unavailable".to_string();
+                })
+                .await;
+                return;
+            }
+        };
+
+        info!("Started ROGTray with asusd GPU interface");
+
+        // Read initial state
+        let mut last_power = String::new();
+        if let Ok(power) = gpu_proxy.power_status() {
+            let mode = gpu_proxy.mode().unwrap_or_default();
+            if let Some(icons) = ICONS.get() {
+                let (icon, title) = map_power_to_icon(&power, &mode, icons);
+                tray.update(|tray: &mut AsusTray| {
+                    tray.current_icon = icon;
+                    tray.current_title = title;
+                })
+                .await;
+            }
+            last_power = power;
+        }
+
+        // Poll loop: check GPU power status periodically and update tray icon.
+        // This runs alongside the async tray event loop.
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+            if let Ok(lock) = config.try_lock() {
+                if !lock.enable_tray_icon {
+                    return;
                 }
-                Err(e) => match e {
-                    zbus::Error::MethodError(_, _, message) => {
-                        warn!(
-                            "Couldn't get mode from supergfxd: {message:?}, the supergfxd service \
-                             may not be running or installed"
-                        )
-                    }
-                    _ => warn!("Couldn't get mode from supergfxd: {e:?}"),
-                },
             }
 
-            info!("Started ROGTray");
-            let mut last_power = GfxPower::Unknown;
-            let dev = find_dgpu();
-            loop {
-                tokio::time::sleep(Duration::from_millis(1000)).await;
-                if let Ok(lock) = config.try_lock() {
-                    if !lock.enable_tray_icon {
-                        return;
+            if let Ok(power) = gpu_proxy.power_status() {
+                let mode = gpu_proxy.mode().unwrap_or_default();
+                if power != last_power {
+                    if let Some(icons) = ICONS.get() {
+                        let (icon, title) = map_power_to_icon(&power, &mode, icons);
+                        tray.update(|tray: &mut AsusTray| {
+                            tray.current_icon = icon;
+                            tray.current_title = title;
+                        })
+                        .await;
                     }
-                }
-                if has_supergfx {
-                    if let Ok(mode) = gfx_proxy.mode().await {
-                        if let Ok(power) = gfx_proxy.power().await {
-                            if last_power != power {
-                                set_tray_icon_and_tip(mode, power, &mut tray, has_supergfx).await;
-                                last_power = power;
-                            }
-                        }
-                    }
-                } else if let Some(dev) = dev.as_ref() {
-                    if let Ok(power) = dev.get_runtime_status() {
-                        if last_power != power {
-                            set_tray_icon_and_tip(GfxMode::Hybrid, power, &mut tray, has_supergfx)
-                                .await;
-                            last_power = power;
-                        }
-                    }
+                    last_power = power;
                 }
             }
         }
