@@ -14,6 +14,7 @@
 - Fix releasing of removed FDs: thanks @DrSAR
 - Add support to control the XG Mobile LED
 - Add aura support for G615LP: thanks @qwertyman100
+- Remove supergfxctl completely
 
 ## [6.3.8]
 

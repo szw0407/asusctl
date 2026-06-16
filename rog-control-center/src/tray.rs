@@ -137,16 +137,16 @@ pub fn init_tray(_supported_properties: Vec<Properties>, config: Arc<Mutex<Confi
         };
 
         // TODO: return an error to the UI
-        let tray;
-        match tray_init.disable_dbus_name(true).spawn().await {
-            Ok(t) => tray = t,
+
+        let tray = match tray_init.disable_dbus_name(true).spawn().await {
+            Ok(t) => t,
             Err(e) => {
                 log::error!(
                     "Tray unable to be initialised: {e:?}. Do you have a system tray enabled?"
                 );
                 return;
             }
-        }
+        };
 
         info!("Tray started");
         let rog_blue = read_icon(&PathBuf::from("asus_notif_blue.png"));
