@@ -11,6 +11,7 @@
 - Add lightbar control to G712L models: thanks @trmdnt
 - Fix issue when detachable gear is disconnected
 - Fix GPU hybrid/ultimate selection when only gpu_mux_mode is available: thanks @Ghoul4500
+- Fix releasing of removed FDs: thanks @ DrSAR
 
 ## [6.3.8]
 
