@@ -39,6 +39,7 @@ mod cli_opts;
 mod fan_curve_cli;
 mod scsi_cli;
 mod slash_cli;
+mod xgm_led_cli;
 
 fn main() {
     // Ensure tracing spans are quiet by default unless user overrides
@@ -200,6 +201,7 @@ fn do_parsed(
         CliCommand::Armoury(cmd) => handle_armoury_command(cmd)?,
         CliCommand::Backlight(cmd) => handle_backlight(cmd)?,
         CliCommand::Battery(cmd) => handle_battery(cmd, &conn)?,
+        CliCommand::XgmLed(cmd) => xgm_led_cli::handle_xgm_led(&cmd.command)?,
         CliCommand::Info(info_opt) => {
             handle_info(info_opt, supported_interfaces, supported_properties)?
         }

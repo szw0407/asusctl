@@ -6,6 +6,7 @@ pub mod ctrl_backlight;
 pub mod ctrl_fancurves;
 /// Control ASUS bios function such as boot sound, Optimus/Dedicated gfx mode
 pub mod ctrl_platform;
+pub mod ctrl_xgm_led;
 
 pub mod asus_armoury;
 pub mod aura_anime;

@@ -9,6 +9,7 @@ pub mod zbus_backlight;
 pub mod zbus_fan_curves;
 pub mod zbus_platform;
 pub mod zbus_slash;
+pub mod zbus_xgm_led;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

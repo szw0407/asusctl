@@ -59,6 +59,10 @@ pub struct Config {
     pub screenpad_gamma: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub screenpad_sync_primary: Option<bool>,
+    /// Persisted XG Mobile LED state: None = never set, Some(false) = OFF,
+    /// Some(true) = ON. Re-applied when the device appears.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub xgm_led_enabled: Option<bool>,
     /// Temporary state for AC/Batt
     #[serde(skip)]
     pub last_power_plugged: u8,
@@ -114,6 +118,7 @@ impl Default for Config {
             last_power_plugged: Default::default(),
             screenpad_gamma: Default::default(),
             screenpad_sync_primary: Default::default(),
+            xgm_led_enabled: Default::default(),
         }
     }
 }
@@ -190,6 +195,7 @@ impl From<Config611> for Config {
             armoury_settings: HashMap::default(),
             screenpad_gamma: None,
             screenpad_sync_primary: Default::default(),
+            xgm_led_enabled: Default::default(),
         };
 
         config.ac_profile_tunings = c.ac_profile_tunings;
@@ -262,6 +268,7 @@ impl From<Config601> for Config {
             armoury_settings: HashMap::default(),
             screenpad_gamma: None,
             screenpad_sync_primary: Default::default(),
+            xgm_led_enabled: Default::default(),
         }
     }
 }

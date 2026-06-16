@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use log::error;
 use rog_dbus::asus_armoury::AsusArmouryProxy;
+use rog_dbus::zbus_xgm_led::XgmLedProxy;
 use rog_platform::asus_armoury::FirmwareAttribute;
 use slint::{ComponentHandle, SharedString, Weak};
 
@@ -201,6 +202,66 @@ pub fn setup_gpu_page(ui: &MainWindow) {
             });
         }) {
             error!("setup_gpu_page: upgrade_in_event_loop: {e:?}");
+        }
+
+        // --- XG Mobile LED ---
+        let xgm_results: Option<(XgmLedProxy<'static>, bool)> = (|| async {
+            let Ok(mut proxies) = find_iface_async::<XgmLedProxy>("xyz.ljones.XgmLed").await else {
+                error!("setup_gpu: no XG Mobile LED interface");
+                return None;
+            };
+            let xgm_proxy = proxies.pop()?;
+            let enabled = xgm_proxy.xgm_led_enabled().await.unwrap_or(false);
+            Some((xgm_proxy, enabled))
+        })()
+        .await;
+        if let Some((xgm_proxy, enabled)) = xgm_results {
+            let handle_xgm = handle.clone();
+            if let Err(e) = handle.upgrade_in_event_loop(move |h| {
+                h.global::<GPUPageData>().set_has_xgm_led(true);
+                h.global::<GPUPageData>().set_xgm_led_enabled(enabled);
+            }) {
+                error!("setup_gpu: failed to set XGM LED initial state: {e:?}");
+            }
+
+            // Wire callback
+            let proxy_cb = xgm_proxy.clone();
+            let handle_cb = handle_xgm.clone();
+            if let Err(e) = handle_xgm.upgrade_in_event_loop(move |h| {
+                h.global::<GPUPageData>()
+                    .on_cb_set_xgm_led_enabled(move |checked| {
+                        let p = proxy_cb.clone();
+                        let w = handle_cb.clone();
+                        tokio::spawn(async move {
+                            let res = p.set_xgm_led_enabled(checked).await;
+                            show_toast(
+                                SharedString::from("XG Mobile LED updated"),
+                                SharedString::from("Failed to set XG Mobile LED"),
+                                w,
+                                res,
+                            );
+                        });
+                    });
+            }) {
+                error!("setup_gpu: failed to wire XGM LED callback: {e:?}");
+            }
+
+            // Listen for property changes
+            let proxy_stream = xgm_proxy.clone();
+            let handle_stream = handle.clone();
+            tokio::spawn(async move {
+                use futures_util::StreamExt;
+                let mut stream = proxy_stream.receive_xgm_led_enabled_changed().await;
+                while let Some(e) = stream.next().await {
+                    if let Ok(enabled) = e.get().await {
+                        handle_stream
+                            .upgrade_in_event_loop(move |h| {
+                                h.global::<GPUPageData>().set_xgm_led_enabled(enabled);
+                            })
+                            .ok();
+                    }
+                }
+            });
         }
     });
 }

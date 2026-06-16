@@ -29,6 +29,7 @@ pub enum CliCommand {
     Backlight(BacklightCommand),
     Battery(BatteryCommand),
     Info(InfoCommand),
+    XgmLed(XgmLedCommand),
 }
 
 impl Default for CliCommand {
@@ -325,3 +326,43 @@ pub struct BrightnessNextCommand {}
     description = "toggle to previous keyboard brightness"
 )]
 pub struct BrightnessPrevCommand {}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "xgmled", description = "XG Mobile LED control")]
+pub struct XgmLedCommand {
+    #[argh(subcommand)]
+    pub command: XgmLedSubCommand,
+}
+
+/// XG Mobile LED subcommand
+#[derive(FromArgs, Debug)]
+#[argh(subcommand)]
+pub enum XgmLedSubCommand {
+    Get(XgmLedGetCommand),
+    Set(XgmLedSetCommand),
+}
+
+impl Default for XgmLedSubCommand {
+    fn default() -> Self {
+        XgmLedSubCommand::Get(XgmLedGetCommand::default())
+    }
+}
+
+#[derive(FromArgs, Debug, Default)]
+#[argh(
+    subcommand,
+    name = "get",
+    description = "get current XG Mobile LED state"
+)]
+pub struct XgmLedGetCommand {}
+
+#[derive(FromArgs, Debug)]
+#[argh(
+    subcommand,
+    name = "set",
+    description = "set xg mobile led on (1) or off (0)"
+)]
+pub struct XgmLedSetCommand {
+    #[argh(positional, description = "zero for off, one for on")]
+    pub value: u8,
+}

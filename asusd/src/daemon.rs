@@ -9,6 +9,7 @@ use asusd::config::Config;
 use asusd::ctrl_backlight::CtrlBacklight;
 use asusd::ctrl_fancurves::CtrlFanCurveZbus;
 use asusd::ctrl_platform::CtrlPlatform;
+use asusd::ctrl_xgm_led::CtrlXgmLed;
 use asusd::{print_board_info, start_tasks, CtrlTask, Reloadable, ZbusRun, DBUS_NAME};
 use config_traits::{StdConfig, StdConfigLoad2};
 use log::{error, info, warn};
@@ -150,6 +151,16 @@ async fn start_daemon() -> Result<(), Box<dyn Error>> {
     let _ = DeviceManager::new(server.clone()).await?;
 
     info!("DeviceManager initialized");
+
+    // XG Mobile LED (non-fatal if not attached)
+    match CtrlXgmLed::try_new(config.clone()) {
+        Ok(Some(ctrl)) => {
+            info!("XG Mobile LED: found and initialized");
+            ctrl.add_to_server(&mut server).await;
+        }
+        Ok(None) => info!("XG Mobile LED: not present"),
+        Err(e) => error!("XG Mobile LED: {e}"),
+    }
 
     // Request dbus name after finishing initalizing all functions
     server.request_name(DBUS_NAME).await?;

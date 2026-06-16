@@ -264,6 +264,7 @@ dependencies = [
  "rog_profiles",
  "rog_scsi",
  "rog_slash",
+ "ron",
  "serde",
  "tokio",
  "udev 0.8.0",
