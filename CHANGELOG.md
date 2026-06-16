@@ -13,6 +13,7 @@
 - Fix GPU hybrid/ultimate selection when only gpu_mux_mode is available: thanks @Ghoul4500
 - Fix releasing of removed FDs: thanks @DrSAR
 - Add support to control the XG Mobile LED
+- Add aura support for G615LP: thanks @qwertyman100
 
 ## [6.3.8]
 
