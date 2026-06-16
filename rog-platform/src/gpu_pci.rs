@@ -283,12 +283,10 @@ impl Device {
                                     }
                                 };
 
-                                if let Some(hwmon_n_result) = hwmon_n_opt {
-                                    if let Ok(hwmon_n) = hwmon_n_result {
-                                        let mut hwmon_path = hwmon_n.path();
-                                        hwmon_path.push("in1_input");
-                                        dgpu = !hwmon_path.exists();
-                                    }
+                                if let Some(Ok(hwmon_n)) = hwmon_n_opt {
+                                    let mut hwmon_path = hwmon_n.path();
+                                    hwmon_path.push("in1_input");
+                                    dgpu = !hwmon_path.exists();
                                 }
                             }
                             if !dgpu {
@@ -356,7 +354,7 @@ fn lscpi(vendor_device: &str) -> Result<String> {
     cmd.args([
         "-d", vendor_device,
     ]);
-    let output = cmd.output().map_err(|e| PlatformError::Io(e))?;
+    let output = cmd.output().map_err(PlatformError::Io)?;
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
@@ -377,7 +375,7 @@ pub fn find_connected_displays(gpu_path: &Path) -> Result<Vec<String>> {
                 None
             }
         })
-        .ok_or_else(|| PlatformError::NotSupported)?;
+        .ok_or(PlatformError::NotSupported)?;
 
     // Collect display names
     let displays: Vec<String> = card_dir
