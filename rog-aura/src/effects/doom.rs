@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::effects::{p_random, EffectState};
 use crate::keyboard::{KeyLayout, LedCode};
-use crate::{effect_state_impl, Colour};
+use crate::Colour;
 
 /// Compute max/min light colours from a base colour and percentage values.
 fn compute_light_range(base: Colour, max_percentage: u8, min_percentage: u8) -> (Colour, Colour) {
@@ -47,7 +47,17 @@ impl DoomFlicker {
 }
 
 impl EffectState for DoomFlicker {
-    effect_state_impl!();
+    fn get_colour(&self) -> Colour {
+        self.colour
+    }
+
+    fn get_led(&self) -> LedCode {
+        self.led.clone()
+    }
+
+    fn set_led(&mut self, address: LedCode) {
+        self.led = address;
+    }
 
     fn next_colour_state(&mut self, _layout: &KeyLayout) {
         let Self {
@@ -123,7 +133,17 @@ impl DoomLightFlash {
 }
 
 impl EffectState for DoomLightFlash {
-    effect_state_impl!();
+    fn get_colour(&self) -> Colour {
+        self.colour
+    }
+
+    fn get_led(&self) -> LedCode {
+        self.led.clone()
+    }
+
+    fn set_led(&mut self, address: LedCode) {
+        self.led = address;
+    }
 
     fn next_colour_state(&mut self, _layout: &KeyLayout) {
         let Self {
