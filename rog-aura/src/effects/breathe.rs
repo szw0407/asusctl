@@ -42,7 +42,7 @@ impl EffectState for Breathe {
     }
 
     fn get_led(&self) -> LedCode {
-        self.led.clone()
+        self.led
     }
 
     fn set_led(&mut self, address: LedCode) {

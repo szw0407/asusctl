@@ -52,7 +52,7 @@ impl EffectState for DoomFlicker {
     }
 
     fn get_led(&self) -> LedCode {
-        self.led.clone()
+        self.led
     }
 
     fn set_led(&mut self, address: LedCode) {
@@ -138,7 +138,7 @@ impl EffectState for DoomLightFlash {
     }
 
     fn get_led(&self) -> LedCode {
-        self.led.clone()
+        self.led
     }
 
     fn set_led(&mut self, address: LedCode) {
