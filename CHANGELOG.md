@@ -1,5 +1,19 @@
 # Changelog
 
+## 6.3.10
+
+- Add hardware monitoring section: Thanks @scardracs
+- Add FA608PM Aura support: Thanks @Piedfer
+- Translate about page: Thanks again @Piedfer
+- Improvements to asus-shutdown: Thanks again @scardracs
+- Add support for FA608WI Aura: Thanks @RPochyly
+- Add Italian translation: @scardracs again!
+- Update stale translations: @scardracs yet again!
+- Fixes to asusd-user startup: @scardracs again
+- Translate GPU page: Thanks again @scardracs
+- Add support for XDG shortcuts: Thanks @voidvore
+- Update depdendencies and cleanup: Thanks @scardracs
+
 ## [6.3.9]
 
 ### Changes
