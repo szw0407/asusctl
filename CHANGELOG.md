@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.3.11
+
+- Fixes GPU power draw calculation
+- Improve GPU state detection loop
+- Fix tray icon colour when dGPU is suspended
+- Fixes to shutdown services: Thanks @scardracs
+- Code quality cleanup and improvements: @scardracs again!
+- Fix dGPU activity when rog control center runs in background: Thanks @ayush123460
+- Reduce GPU log detection noise: Thanks @idobutidont
+- Packaging, CI/CD and Issue tracking optimizations: Thanks @luytan and @scardracs, also @ayush123460 and @Owen-sz for assisting
+
 ## 6.3.10
 
 - Add hardware monitoring section: Thanks @scardracs
