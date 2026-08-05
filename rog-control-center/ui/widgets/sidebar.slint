@@ -1,14 +1,14 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: MIT
 
-import { Palette, HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { Palette, VerticalBox } from "std-widgets.slint";
 
 component SideBarItem inherits Rectangle {
     in property <bool> selected;
     in property <bool> has-focus;
     in-out property <string> text <=> label.text;
     callback clicked <=> touch.clicked;
-    min-height: self.visible ? l.preferred-height + 10px : 0px;
+    min-height: self.visible ? l.preferred-height : 0px;
     // min-width: self.visible ? l.preferred-width + 10px : 0px;
     states [
         pressed when touch.pressed: {
@@ -29,12 +29,16 @@ component SideBarItem inherits Rectangle {
         opacity: 0;
         background: Palette.selection-background;
         animate opacity { duration: 150ms; }
-        height: l.preferred-height;
+        height: 100%;
     }
 
-    l := HorizontalBox {
+    l := HorizontalLayout {
         x: 4px;
         y: (parent.height - self.height) / 2;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 6px;
+        padding-bottom: 6px;
         spacing: 0px;
         label := Text {
             color: Palette.foreground;
@@ -114,7 +118,7 @@ export component SideBar inherits Rectangle {
         }
 
         navigation := VerticalLayout {
-            spacing: -6px;
+            spacing: 2px;
             alignment: start;
             vertical-stretch: 0;
             for item[index] in root.model: SideBarItem {
