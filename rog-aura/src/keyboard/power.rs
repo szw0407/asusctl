@@ -1,5 +1,5 @@
 //! Power state for Laptop MCU RGB/LED. This is generally for newer
-//! 0x18c6, 0x19B6, 0x1a30, keyboard models (2021+)
+//! 0x18c6, 0x19B6, 0x1a30, 0x1ce6, keyboard models (2021+)
 use std::fmt::Debug;
 use std::ops::{BitAnd, BitOr};
 
@@ -158,7 +158,7 @@ pub struct LaptopAuraPower {
 }
 
 impl LaptopAuraPower {
-    /// # Bits for newer 0x18c6, 0x19B6, 0x1a30, keyboard models
+    /// # Bits for newer 0x18c6, 0x19B6, 0x1a30, 0x1ce6, keyboard models
     ///
     /// | Byte 1 | Byte 2  | Byte 3  | Byte 4  | Label    |
     /// |--------|---------|---------|---------|----------|
