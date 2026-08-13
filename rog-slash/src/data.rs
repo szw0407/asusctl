@@ -16,6 +16,7 @@ pub enum SlashType {
     GA403_2025,
     GA605_2024,
     GA605_2025,
+    GU405_2026,
     GU605_2024,
     GU605_2025,
     GU606_2026,
@@ -31,6 +32,7 @@ impl SlashType {
             SlashType::GA403_2024 => PROD_ID1,
             SlashType::GA605_2025 => PROD_ID2,
             SlashType::GA605_2024 => PROD_ID2,
+            SlashType::GU405_2026 => PROD_ID2,
             SlashType::GU605_2025 => PROD_ID2,
             SlashType::GU605_2024 => PROD_ID1,
             SlashType::GU606_2026 => PROD_ID2,
@@ -45,6 +47,7 @@ impl SlashType {
             SlashType::GA403_2024 => PROD_ID1_STR,
             SlashType::GA605_2025 => PROD_ID2_STR,
             SlashType::GA605_2024 => PROD_ID2_STR,
+            SlashType::GU405_2026 => PROD_ID2_STR,
             SlashType::GU605_2025 => PROD_ID2_STR,
             SlashType::GU605_2024 => PROD_ID1_STR,
             SlashType::GU606_2026 => PROD_ID2_STR,
@@ -70,6 +73,8 @@ impl SlashType {
             SlashType::GA605_2025
         } else if board_name.contains("GA605") {
             SlashType::GA605_2024
+        } else if board_name.contains("GU405") {
+            SlashType::GU405_2026
         } else if board_name.contains("GU606") {
             SlashType::GU606_2026
         } else if board_name.contains("GU605C") {
@@ -91,6 +96,7 @@ impl FromStr for SlashType {
             "GA403_2024" => Self::GA403_2024,
             "GA605_2025" => Self::GA605_2025,
             "GA605_2024" => Self::GA605_2024,
+            "GU405_2026" => Self::GU405_2026,
             "GU605_2025" => Self::GU605_2025,
             "GU605_2024" => Self::GU605_2024,
             "GU606_2026" => Self::GU606_2026,
