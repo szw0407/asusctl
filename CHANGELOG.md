@@ -1,5 +1,32 @@
 # Changelog
 
+## 6.4.0
+
+- Add new profile tuning get/set to asusctl cli
+- Fixes and improvements to ppt setting via cli
+- Fixed sidebar spacing issues in Rogcc
+- Major cleanups
+- Cargo lockfile reinstated for our dear nixOs users
+- Improvements to GitHub issue templating: Thanks @voidvore
+- Clean up some CPU error messages: Thanks @scardracs
+- Add aura support for GU502GV: Thanks @MasterDash5
+- Translations now compiled at build time: Thanks @NB-Group and @scardracs
+- Add aura support for ROG Strix G16 G614PM: Thanks @sensiedi
+- Improvements to unsupported armoury attribute logging: Thanks again @scardracs
+- Improvements to D-Bus object path resolution: @scardracs again!
+- Add aura and slash support for ROG Zephyrus G16 GU606AX: Thanks @Boogie61
+- Fix Rogcc app window default size to better fit content: Thanks @mykola-shevchenko-dev
+- New mdbook for documentation: Thanks @luytan
+- Add aura support for GX651AR: Thanks @Cymirk
+- Add slash support for GU405 models: Thanks @mig
+- Improved readme: Thanks again @voidvore
+- Migration to LazyLock and error mapping improvements: @scardracs thanks again!
+- Warning for PPD confliction added to Readme: Thanks @scardracs
+- Fixes for SCSI Aura devices: Thanks again @NB-Group
+- Fixes for GPU status and monitoring: Thanks again @scardracs and @NB-Group
+- Fix bidirectional Quiet-Lowpower fallback in some devices: Thanks @f4mrfaux
+- Replace polling loops with event monitors: Thanks @scardracs
+
 ## 6.3.11
 
 - Fixes GPU power draw calculation
