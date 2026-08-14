@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "asus-shutdown"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "env_logger",
  "futures-util",
@@ -293,7 +293,7 @@ dependencies = [
 
 [[package]]
 name = "asusctl"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "argh",
  "dmi_id",
@@ -313,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "asusd"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "cargo-husky",
  "concat-idents",
@@ -341,7 +341,7 @@ dependencies = [
 
 [[package]]
 name = "asusd-user"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "config-traits",
  "dirs",
@@ -958,7 +958,7 @@ dependencies = [
 
 [[package]]
 name = "config-traits"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "log",
  "ron",
@@ -1329,7 +1329,7 @@ dependencies = [
 
 [[package]]
 name = "dmi_id"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "log",
  "udev",
@@ -4769,7 +4769,7 @@ dependencies = [
 
 [[package]]
 name = "rog-control-center"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "argh",
  "ashpd",
@@ -4803,7 +4803,7 @@ dependencies = [
 
 [[package]]
 name = "rog_anime"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "dmi_id",
  "gif",
@@ -4818,7 +4818,7 @@ dependencies = [
 
 [[package]]
 name = "rog_aura"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "dmi_id",
  "log",
@@ -4830,7 +4830,7 @@ dependencies = [
 
 [[package]]
 name = "rog_dbus"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "asusd",
  "log",
@@ -4845,7 +4845,7 @@ dependencies = [
 
 [[package]]
 name = "rog_platform"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "concat-idents",
  "inotify",
@@ -4861,7 +4861,7 @@ dependencies = [
 
 [[package]]
 name = "rog_profiles"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "log",
  "rog_platform",
@@ -4873,7 +4873,7 @@ dependencies = [
 
 [[package]]
 name = "rog_scsi"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "libc",
  "ron",
@@ -4884,7 +4884,7 @@ dependencies = [
 
 [[package]]
 name = "rog_simulators"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "log",
  "rog_anime",
@@ -4894,7 +4894,7 @@ dependencies = [
 
 [[package]]
 name = "rog_slash"
-version = "6.3.11"
+version = "6.4.0"
 dependencies = [
  "dmi_id",
  "serde",
