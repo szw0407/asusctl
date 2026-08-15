@@ -54,3 +54,32 @@ jobs:
 
             - name: Build workspace
               run: cargo build --workspace --all-targets --locked
+
+    audit:
+        name: cargo audit (Debian 13 / rustc 1.85)
+        runs-on: ubuntu-latest
+        container:
+            image: debian:trixie
+        steps:
+            - name: Install dependencies
+              run: |
+                  apt-get update
+                  apt-get install -y --no-install-recommends \
+                      ca-certificates \
+                      git \
+                      rustc \
+                      cargo
+
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Install cargo-audit
+              # 0.22.1 is the last release buildable with rustc 1.85; anything
+              # newer requires rustc >= 1.88 (not available on Debian 13).
+              run: cargo install --locked cargo-audit@0.22.1
+
+            - name: Audit dependencies for vulnerabilities (RustSec)
+              # Advisories without an exploitable path are ignored via
+              # .cargo/audit.toml (each entry documented there).
+              run: cargo audit
