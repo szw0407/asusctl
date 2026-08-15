@@ -47,19 +47,10 @@ thiserror.workspace = true
 udev.workspace = true
 serde_json.workspace = true
 
-[dependencies.slint]
-git = "https://github.com/slint-ui/slint.git"
-default-features = false
-features = [
-    "compat-1-2",
-    "gettext",
-    "backend-winit-wayland",
-    "renderer-femtovg",
-    # "renderer-skia-opengl",
-]
+slint.workspace = true
 
-[build-dependencies.slint-build]
-git = "https://github.com/slint-ui/slint.git"
+[build-dependencies]
+slint-build.workspace = true
 
 [package.metadata.deb]
 license-file = ["../LICENSE", "4"]

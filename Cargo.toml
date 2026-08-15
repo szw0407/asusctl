@@ -36,7 +36,7 @@ default-members = ["asusctl", "asusd", "asus-shutdown", "asusd-user", "rog-contr
 
 [workspace.dependencies]
 argh = "^0.1.19"
-ashpd = { version = "^0.13.13", default-features = false, features = ["async-io", "global_shortcuts"] }
+ashpd = { version = "=0.12.3", default-features = false, features = ["tokio"] }
 concat-idents = "^1.1.5"
 console-subscriber = "^0.5.0"
 dirs = "^6.0.0"
@@ -44,25 +44,32 @@ env_logger = "^0.11.11"
 futures-util = "^0.3.33"
 gif = "^0.14.2"
 glam = { version = "^0.33.2", features = ["serde"] }
-image = "^0.25.10"
+image = "=0.25.9"
 inotify = "^0.11.4"
 ksni = { version = "^0.3.6", default-features = false, features = ["async-io"] }
 libc = "^0.2.189"
 log = "^0.4.33"
 logind-zbus = { version = "^5.3.2" }
 mio = "^1.2.2"
-notify-rust = { version = "^4.18.0", features = ["z", "async"] }
+notify-rust = { version = "=4.17.0", features = ["z", "async"] }
 nvml-wrapper = "^0.12.1"
-pix = "^1.0.1"
+pix = "=0.13.4"
 png = "^0.18.1"
-png_pong = "^0.12.0"
+png_pong = "=0.9.3"
 ron = "^0.12.2"
 rusb = "^0.9.4"
 sdl2 = { version = "^0.38.0", default-features = false }
 serde = { version = "^1.0.229", features = ["serde_derive"] }
 serde_json = "^1.0.151"
-slint = { version = "^1.17.1", features = ["gettext"] }
-slint-build = "^1.17.1"
+# Pinned: slint >= 1.14 needs newer rustc than 1.85 (the previous git
+# dependency tracked slint master, which requires rustc 1.92).
+slint = { version = "=1.13.1", default-features = false, features = [
+  "compat-1-2",
+  "gettext",
+  "backend-winit-wayland",
+  "renderer-femtovg",
+] }
+slint-build = "=1.13.1"
 thiserror = "^2.0.19"
 tokio = { version = "^1.53.1", default-features = false, features = [
   "macros",
@@ -73,7 +80,8 @@ tokio = { version = "^1.53.1", default-features = false, features = [
 ] }
 udev = { version = "^0.9.3", features = ["mio"] }
 uhid-virt = "^0.0.8"
-zbus = "^5.18.0"
+# Pinned: zbus >= 5.14 requires rustc >= 1.87.
+zbus = "=5.13.2"
 
 [profile.release]
 lto = "thin"

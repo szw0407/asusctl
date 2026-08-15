@@ -692,10 +692,7 @@ impl CtrlPlatform {
     }
 
     #[zbus(property)]
-    async fn set_disable_nvidia_powerd_on_battery(
-        &mut self,
-        disable: bool,
-    ) -> Result<(), zbus::Error> {
+    async fn set_disable_nvidia_powerd_on_battery(&mut self, disable: bool) -> Result<(), FdoErr> {
         self.config.lock().await.disable_nvidia_powerd_on_battery = disable;
         self.config.lock().await.write();
         Ok(())

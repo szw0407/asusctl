@@ -3,11 +3,7 @@
 //! Host registration must precede portal use and occur once per connection.
 //! KDE may persist denied shortcuts with an empty trigger.
 
-use ashpd::desktop::global_shortcuts::{
-    BindShortcutsOptions, ConfigureShortcutsOptions, GlobalShortcuts, ListShortcutsOptions,
-    NewShortcut, Shortcut,
-};
-use ashpd::desktop::CreateSessionOptions;
+use ashpd::desktop::global_shortcuts::{GlobalShortcuts, NewShortcut, Shortcut};
 use ashpd::AppID;
 use futures_util::StreamExt;
 use log::{error, info, warn};
@@ -72,6 +68,40 @@ fn assignment(shortcuts: &[Shortcut]) -> Assignment {
             .find(|s| s.id() == SHORTCUT_ID)
             .map(|s| (s.id(), s.trigger_description())),
     )
+}
+
+/// Portal proxy with the interface version, read once at init time.
+struct Portal {
+    gs: GlobalShortcuts<'static>,
+    version: u32,
+}
+
+impl Portal {
+    // Host registration must be the first portal call.
+    async fn new() -> Option<Self> {
+        let app_id = match AppID::try_from(APP_ID) {
+            Ok(id) => id,
+            Err(err) => {
+                error!("Invalid application ID {APP_ID}: {err}");
+                return None;
+            }
+        };
+        if let Err(err) = ashpd::register_host_app(app_id).await {
+            error!("Host app registration failed: {err}");
+            return None;
+        }
+        match GlobalShortcuts::new().await {
+            Ok(gs) => {
+                // ashpd 0.12 has no version accessor: read the property once.
+                let version = gs.get_property::<u32>("version").await.unwrap_or(1);
+                Some(Portal { gs, version })
+            }
+            Err(err) => {
+                error!("GlobalShortcuts portal unavailable: {err}");
+                None
+            }
+        }
+    }
 }
 
 enum Command {
@@ -157,17 +187,12 @@ impl ShortcutHandle {
     }
 }
 
-pub fn start(
-    rt: &tokio::runtime::Handle,
-    connection: zbus::Connection,
-    window: WindowController,
-) -> ShortcutService {
+pub fn start(rt: &tokio::runtime::Handle, window: WindowController) -> ShortcutService {
     let (commands, rx) = mpsc::channel(1);
     let (status, status_rx) = watch::channel(ShortcutStatus::Disabled);
     let (shutdown, shutdown_rx) = watch::channel(false);
     let configurable = Arc::new(AtomicBool::new(false));
     let task = rt.spawn(run(
-        connection,
         window.downgrade(),
         rx,
         status,
@@ -187,7 +212,6 @@ pub fn start(
 }
 
 async fn run(
-    connection: zbus::Connection,
     window: WeakWindowController,
     mut commands: mpsc::Receiver<Command>,
     status: watch::Sender<ShortcutStatus>,
@@ -195,7 +219,7 @@ async fn run(
     mut shutdown: watch::Receiver<bool>,
 ) {
     // Reuse the portal proxy; recreate sessions per enable cycle.
-    let mut portal: Option<GlobalShortcuts> = None;
+    let mut portal: Option<Portal> = None;
     loop {
         let command = tokio::select! {
             _ = shutdown_requested(&mut shutdown) => break,
@@ -207,8 +231,8 @@ async fn run(
         match command {
             Command::Enable { mode, respond } => {
                 enable(
-                    &connection, &window, &mut portal, &status, &configurable, &mut commands,
-                    &mut shutdown, mode, respond,
+                    &window, &mut portal, &status, &configurable, &mut commands, &mut shutdown,
+                    mode, respond,
                 )
                 .await;
             }
@@ -232,28 +256,6 @@ async fn shutdown_requested(shutdown: &mut watch::Receiver<bool>) {
     }
 }
 
-// Host registration must be the first portal call on this connection.
-async fn init_portal(connection: &zbus::Connection) -> Option<GlobalShortcuts> {
-    let app_id = match AppID::try_from(APP_ID) {
-        Ok(id) => id,
-        Err(err) => {
-            error!("Invalid application ID {APP_ID}: {err}");
-            return None;
-        }
-    };
-    if let Err(err) = ashpd::register_host_app_with_connection(connection.clone(), app_id).await {
-        error!("Host app registration failed: {err}");
-        return None;
-    }
-    match GlobalShortcuts::with_connection(connection.clone()).await {
-        Ok(proxy) => Some(proxy),
-        Err(err) => {
-            error!("GlobalShortcuts portal unavailable: {err}");
-            None
-        }
-    }
-}
-
 fn set_status(status: &watch::Sender<ShortcutStatus>, new: ShortcutStatus) {
     if *status.borrow() != new {
         let _ = status.send(new);
@@ -270,38 +272,34 @@ fn finish(
 }
 
 async fn query_assignment(
-    gs: &GlobalShortcuts,
-    session: &ashpd::desktop::Session<GlobalShortcuts>,
+    portal: &Portal,
+    session: &ashpd::desktop::Session<'_, GlobalShortcuts<'_>>,
 ) -> ashpd::Result<Assignment> {
-    let request = gs
-        .list_shortcuts(session, ListShortcutsOptions::default())
-        .await?;
+    let request = portal.gs.list_shortcuts(session).await?;
     Ok(assignment(request.response()?.shortcuts()))
 }
 
 // A session permits one bind attempt; cancellation may persist an empty trigger.
 async fn bind_shortcut(
-    gs: &GlobalShortcuts,
-    session: &ashpd::desktop::Session<GlobalShortcuts>,
+    portal: &Portal,
+    session: &ashpd::desktop::Session<'_, GlobalShortcuts<'_>>,
 ) -> ashpd::Result<Assignment> {
     let shortcut =
         NewShortcut::new(SHORTCUT_ID, SHORTCUT_DESCRIPTION).preferred_trigger(PREFERRED_TRIGGER);
     info!("Requesting shortcut bind via portal");
-    let request = gs
-        .bind_shortcuts(session, &[shortcut], None, BindShortcutsOptions::default())
-        .await?;
+    let request = portal.gs.bind_shortcuts(session, &[shortcut], None).await?;
     match request.response() {
         Ok(bound) => Ok(assignment(bound.shortcuts())),
         Err(err) => {
             info!("Shortcut bind not completed ({err}), re-reading assignments");
-            query_assignment(gs, session).await
+            query_assignment(portal, session).await
         }
     }
 }
 
 async fn apply_enable(
-    gs: &GlobalShortcuts,
-    session: &ashpd::desktop::Session<GlobalShortcuts>,
+    portal: &Portal,
+    session: &ashpd::desktop::Session<'_, GlobalShortcuts<'_>>,
     current: &mut Assignment,
     bind_attempted: &mut bool,
     mode: EnableMode,
@@ -311,12 +309,13 @@ async fn apply_enable(
             Assignment::Missing if !*bind_attempted => {
                 // A failed or cancelled bind may still persist state.
                 *bind_attempted = true;
-                *current = bind_shortcut(gs, session).await?;
+                *current = bind_shortcut(portal, session).await?;
             }
-            Assignment::Unassigned if gs.version() >= 2 => {
+            Assignment::Unassigned if portal.version >= 2 => {
                 // KDE requires Configure for an existing empty trigger.
-                if let Err(err) = gs
-                    .configure_shortcuts(session, None, ConfigureShortcutsOptions::default())
+                if let Err(err) = portal
+                    .gs
+                    .configure_shortcuts(session, None, None::<ashpd::ActivationToken>)
                     .await
                 {
                     warn!("Could not open shortcut configuration: {err}");
@@ -333,9 +332,8 @@ async fn apply_enable(
 
 #[allow(clippy::too_many_arguments)]
 async fn enable(
-    connection: &zbus::Connection,
     window: &WeakWindowController,
-    portal: &mut Option<GlobalShortcuts>,
+    portal: &mut Option<Portal>,
     status: &watch::Sender<ShortcutStatus>,
     configurable: &Arc<AtomicBool>,
     commands: &mut mpsc::Receiver<Command>,
@@ -346,7 +344,7 @@ async fn enable(
     set_status(status, ShortcutStatus::Starting);
 
     if portal.is_none() {
-        match init_portal(connection).await {
+        match Portal::new().await {
             Some(proxy) => *portal = Some(proxy),
             None => {
                 finish(status, respond, ShortcutStatus::Unavailable);
@@ -354,10 +352,10 @@ async fn enable(
             }
         }
     }
-    let gs = portal.as_ref().expect("portal proxy just initialized");
-    configurable.store(gs.version() >= 2, Ordering::Release);
+    let portal = portal.as_ref().expect("portal proxy just initialized");
+    configurable.store(portal.version >= 2, Ordering::Release);
 
-    let session = match gs.create_session(CreateSessionOptions::default()).await {
+    let session = match portal.gs.create_session().await {
         Ok(session) => session,
         Err(err) => {
             error!("Could not create global shortcuts session: {err}");
@@ -368,15 +366,15 @@ async fn enable(
     info!("Global shortcuts session created");
 
     run_session(
-        gs, session, window, status, commands, shutdown, mode, respond,
+        portal, session, window, status, commands, shutdown, mode, respond,
     )
     .await;
 }
 
 #[allow(clippy::too_many_arguments)]
 async fn run_session(
-    gs: &GlobalShortcuts,
-    session: ashpd::desktop::Session<GlobalShortcuts>,
+    portal: &Portal,
+    session: ashpd::desktop::Session<'static, GlobalShortcuts<'static>>,
     window: &WeakWindowController,
     status: &watch::Sender<ShortcutStatus>,
     commands: &mut mpsc::Receiver<Command>,
@@ -387,7 +385,7 @@ async fn run_session(
     let mut respond = Some(respond);
     let final_status = tokio::select! {
         _ = shutdown_requested(shutdown) => ShortcutStatus::Disabled,
-        result = run_session_inner(gs, &session, window, status, commands, mode, &mut respond) => result,
+        result = run_session_inner(portal, &session, window, status, commands, mode, &mut respond) => result,
     };
 
     if let Some(respond) = respond.take() {
@@ -402,8 +400,8 @@ async fn run_session(
 
 #[allow(clippy::too_many_arguments)]
 async fn run_session_inner(
-    gs: &GlobalShortcuts,
-    session: &ashpd::desktop::Session<GlobalShortcuts>,
+    portal: &Portal,
+    session: &ashpd::desktop::Session<'static, GlobalShortcuts<'static>>,
     window: &WeakWindowController,
     status: &watch::Sender<ShortcutStatus>,
     commands: &mut mpsc::Receiver<Command>,
@@ -411,14 +409,14 @@ async fn run_session_inner(
     respond: &mut Option<oneshot::Sender<ShortcutStatus>>,
 ) -> ShortcutStatus {
     // Subscribe before List/Bind to avoid missing early signals.
-    let mut activated = match gs.receive_activated().await {
+    let mut activated = match portal.gs.receive_activated().await {
         Ok(stream) => stream,
         Err(err) => {
             error!("Could not subscribe to Activated: {err}");
             return ShortcutStatus::Unavailable;
         }
     };
-    let mut changed = match gs.receive_shortcuts_changed().await {
+    let mut changed = match portal.gs.receive_shortcuts_changed().await {
         Ok(stream) => stream,
         Err(err) => {
             error!("Could not subscribe to ShortcutsChanged: {err}");
@@ -433,7 +431,7 @@ async fn run_session_inner(
         }
     };
 
-    let mut current = match query_assignment(gs, session).await {
+    let mut current = match query_assignment(portal, session).await {
         Ok(found) => found,
         Err(err) => {
             error!("Could not list shortcuts: {err}");
@@ -443,7 +441,7 @@ async fn run_session_inner(
     let mut bind_attempted = false;
 
     let mut current_status =
-        match apply_enable(gs, session, &mut current, &mut bind_attempted, mode).await {
+        match apply_enable(portal, session, &mut current, &mut bind_attempted, mode).await {
             Ok(result) => result,
             Err(err) => {
                 error!("Enable failed: {err}");
@@ -462,9 +460,10 @@ async fn run_session_inner(
                 match command {
                     Some(Command::Disable) => break ShortcutStatus::Disabled,
                     Some(Command::Configure { respond }) => {
-                        let ok = if gs.version() >= 2 {
-                            match gs
-                                .configure_shortcuts(session, None, ConfigureShortcutsOptions::default())
+                        let ok = if portal.version >= 2 {
+                            match portal
+                                .gs
+                                .configure_shortcuts(session, None, None::<ashpd::ActivationToken>)
                                 .await
                             {
                                 Ok(()) => true,
@@ -476,7 +475,7 @@ async fn run_session_inner(
                         } else {
                             warn!(
                                 "ConfigureShortcuts needs portal version 2 (have {})",
-                                gs.version()
+                                portal.version
                             );
                             false
                         };
@@ -484,7 +483,7 @@ async fn run_session_inner(
                     }
                     Some(Command::Enable { mode, respond }) => {
                         set_status(status, ShortcutStatus::Starting);
-                        match apply_enable(gs, session, &mut current, &mut bind_attempted, mode).await {
+                        match apply_enable(portal, session, &mut current, &mut bind_attempted, mode).await {
                             Ok(result) => {
                                 current_status = result;
                                 finish(status, respond, result);

@@ -101,7 +101,9 @@ async fn main() -> Result<()> {
 
     let state_zbus = ROGCCZbus::new();
     let app_state = state_zbus.clone_state();
-    let conn = zbus::connection::Builder::session()?
+    // Keep the connection alive for the lifetime of the app (holds the
+    // served ROGCCZbus interface and its well-known name).
+    let _conn = zbus::connection::Builder::session()?
         .name(ZBUS_IFACE)?
         .serve_at(ZBUS_PATH, state_zbus)?
         .build()
@@ -208,8 +210,7 @@ async fn main() -> Result<()> {
     let shortcut_service = if is_rog_ally {
         None
     } else {
-        let service =
-            rog_control_center::shortcuts::start(rt.handle(), conn.clone(), window.clone());
+        let service = rog_control_center::shortcuts::start(rt.handle(), window.clone());
         let handle = service.handle();
         window.set_shortcuts(handle.clone());
         if config.lock().is_ok_and(|c| c.enable_global_shortcut) {

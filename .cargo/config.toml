@@ -1,5 +1,6 @@
-[target.x86_64-unknown-linux-gnu]
-linker = ".cargo/linker-wrapper.sh"
-
-[target.aarch64-unknown-linux-gnu]
-linker = ".cargo/linker-wrapper.sh"
+# Prefer dependency versions whose `rust-version` is compatible with the
+# toolchain in rust-toolchain.toml (rustc 1.85). Without this, `cargo update`
+# picks the newest semver-compatible versions, many of which require rustc
+# >= 1.86/1.87/1.9x and fail to build.
+[resolver]
+incompatible-rust-versions = "fallback"

@@ -108,7 +108,7 @@ fn start_dgpu_status_mon(config: Arc<Mutex<Config>>, gpu_status_tx: watch::Sende
                     dgpu = None;
                 }
                 // Re-detection is a full udev scan, so do it sparingly
-                if dgpu.is_none() && ticks.is_multiple_of(4) {
+                if dgpu.is_none() && ticks % 4 == 0 {
                     dgpu = find_dgpu();
                 }
             }
