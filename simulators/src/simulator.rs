@@ -161,7 +161,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 for (x_count, b) in dev.buffer[start..=end].iter().enumerate() {
                     canvas.set_draw_color(Color::RGB(*b, *b, *b));
 
-                    #[allow(clippy::manual_is_multiple_of)]
+                    // `unknown_lints` is silenced first so older toolchains (rustc 1.85)
+                    // don't reject the newer lint names while newer ones still honor them.
+                    #[allow(unknown_lints, clippy::manual_is_multiple_of, clippy::nonminimal_bool)]
                     let x: i32 = w + x_count as i32 * w
                         - if (y_count + y_offset as usize) % 2 != 0 {
                             0

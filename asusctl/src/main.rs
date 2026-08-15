@@ -981,7 +981,9 @@ fn print_firmware_attr(attr: &AsusArmouryProxyBlocking) -> Result<(), Box<dyn st
     Ok(())
 }
 
-#[allow(clippy::manual_is_multiple_of, clippy::nonminimal_bool)]
+// `unknown_lints` is silenced first so older toolchains (rustc 1.85) don't
+// reject the newer lint names while newer ones still honor them.
+#[allow(unknown_lints, clippy::manual_is_multiple_of, clippy::nonminimal_bool)]
 fn handle_armoury_command(
     cmd: &ArmouryCommand,
     conn: &Connection,
