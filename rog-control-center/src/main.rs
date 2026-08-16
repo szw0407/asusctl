@@ -22,8 +22,7 @@ use rog_control_center::zbus_proxies::{
 };
 use tokio::runtime::Runtime;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     // Ensure tracing spans are quiet by default unless user overrides
     if std::env::var_os("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", "warn,tracing=error,zbus=error");
@@ -82,12 +81,12 @@ async fn main() -> Result<()> {
     let asusd_version = match platform_proxy.version() {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("Could not get asusd version: {e:?}\nIs asusd.service running?");
+            error!("Could not get asusd version: {e:?}\nIs asusd.service running?");
             std::process::exit(1);
         }
     };
     if asusd_version != self_version {
-        println!("Version mismatch: asusctl = {self_version}, asusd = {asusd_version}");
+        warn!("Version mismatch: asusctl = {self_version}, asusd = {asusd_version}");
         // return Ok(());
     }
 
@@ -103,11 +102,14 @@ async fn main() -> Result<()> {
     let app_state = state_zbus.clone_state();
     // Keep the connection alive for the lifetime of the app (holds the
     // served ROGCCZbus interface and its well-known name).
-    let _conn = zbus::connection::Builder::session()?
-        .name(ZBUS_IFACE)?
-        .serve_at(ZBUS_PATH, state_zbus)?
-        .build()
-        .await
+    let _conn = rt
+        .block_on(async {
+            zbus::connection::Builder::session()?
+                .name(ZBUS_IFACE)?
+                .serve_at(ZBUS_PATH, state_zbus)?
+                .build()
+                .await
+        })
         .map_err(|err| {
             warn!("{}: add_to_server {}", ZBUS_PATH, err);
             err
@@ -197,7 +199,7 @@ async fn main() -> Result<()> {
     // Prefetch supported Aura modes once at startup and move into the
     // spawned UI thread so the UI uses a stable, immutable list.
     let prefetched_supported: std::sync::Arc<Option<Vec<i32>>> = std::sync::Arc::new(
-        rog_control_center::ui::setup_aura::prefetch_supported_basic_modes().await,
+        rt.block_on(rog_control_center::ui::setup_aura::prefetch_supported_basic_modes()),
     );
 
     let window = WindowController::new(
@@ -232,40 +234,57 @@ async fn main() -> Result<()> {
     }
 
     let shortcuts = shortcut_service.as_ref().map(|service| service.handle());
+    let handle = rt.handle().clone();
     thread::spawn(move || {
         let mut state = AppState::StartingUp;
+        let mut ally_ui = None;
         loop {
             if is_rog_ally {
-                let config_copy_2 = config.clone();
-                let newui = setup_window(
-                    config.clone(),
-                    prefetched_supported.clone(),
-                    app_state.clone(),
-                    is_tuf,
-                    None,
-                );
-                newui.window().on_close_requested(move || {
-                    exit(0);
-                });
+                if ally_ui.is_none() {
+                    let _guard = handle.enter();
+                    let config_copy_2 = config.clone();
+                    let newui = setup_window(
+                        config.clone(),
+                        prefetched_supported.clone(),
+                        app_state.clone(),
+                        is_tuf,
+                        None,
+                    );
+                    newui.window().on_close_requested(move || {
+                        exit(0);
+                    });
 
-                let ui_copy = newui.as_weak();
-                newui
-                    .window()
-                    .set_rendering_notifier(move |s, _| {
-                        if let slint::RenderingState::BeforeRendering = s {
-                            let config = config_copy_2.clone();
-                            ui_copy
-                                .upgrade_in_event_loop(move |w| {
-                                    let fullscreen =
-                                        config.lock().is_ok_and(|c| c.start_fullscreen);
-                                    if fullscreen && !w.window().is_fullscreen() {
-                                        w.window().set_fullscreen(fullscreen);
-                                    }
-                                })
-                                .ok();
-                        }
-                    })
-                    .ok();
+                    let ui_copy = newui.as_weak();
+                    newui
+                        .window()
+                        .set_rendering_notifier(move |s, _| {
+                            if let slint::RenderingState::BeforeRendering = s {
+                                let config = config_copy_2.clone();
+                                ui_copy
+                                    .upgrade_in_event_loop(move |w| {
+                                        let fullscreen =
+                                            config.lock().is_ok_and(|c| c.start_fullscreen);
+                                        if fullscreen && !w.window().is_fullscreen() {
+                                            w.window().set_fullscreen(fullscreen);
+                                        }
+                                    })
+                                    .ok();
+                            }
+                        })
+                        .ok();
+
+                    ally_ui = Some(newui);
+                }
+
+                if let Ok(app_state) = app_state.lock() {
+                    state = *app_state;
+                }
+
+                sleep(Duration::from_millis(300));
+                if state == AppState::QuitApp {
+                    window.request(WindowCommand::Quit);
+                    break;
+                }
 
                 continue;
             }
@@ -304,7 +323,7 @@ async fn main() -> Result<()> {
     // session has been closed.
     drop(_enter);
     if let Some(service) = shortcut_service {
-        service.shutdown().await;
+        rt.block_on(service.shutdown());
     }
     rt.shutdown_background();
     Ok(())
