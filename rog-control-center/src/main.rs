@@ -234,40 +234,57 @@ fn main() -> Result<()> {
     }
 
     let shortcuts = shortcut_service.as_ref().map(|service| service.handle());
+    let handle = rt.handle().clone();
     thread::spawn(move || {
         let mut state = AppState::StartingUp;
+        let mut ally_ui = None;
         loop {
             if is_rog_ally {
-                let config_copy_2 = config.clone();
-                let newui = setup_window(
-                    config.clone(),
-                    prefetched_supported.clone(),
-                    app_state.clone(),
-                    is_tuf,
-                    None,
-                );
-                newui.window().on_close_requested(move || {
-                    exit(0);
-                });
+                if ally_ui.is_none() {
+                    let _guard = handle.enter();
+                    let config_copy_2 = config.clone();
+                    let newui = setup_window(
+                        config.clone(),
+                        prefetched_supported.clone(),
+                        app_state.clone(),
+                        is_tuf,
+                        None,
+                    );
+                    newui.window().on_close_requested(move || {
+                        exit(0);
+                    });
 
-                let ui_copy = newui.as_weak();
-                newui
-                    .window()
-                    .set_rendering_notifier(move |s, _| {
-                        if let slint::RenderingState::BeforeRendering = s {
-                            let config = config_copy_2.clone();
-                            ui_copy
-                                .upgrade_in_event_loop(move |w| {
-                                    let fullscreen =
-                                        config.lock().is_ok_and(|c| c.start_fullscreen);
-                                    if fullscreen && !w.window().is_fullscreen() {
-                                        w.window().set_fullscreen(fullscreen);
-                                    }
-                                })
-                                .ok();
-                        }
-                    })
-                    .ok();
+                    let ui_copy = newui.as_weak();
+                    newui
+                        .window()
+                        .set_rendering_notifier(move |s, _| {
+                            if let slint::RenderingState::BeforeRendering = s {
+                                let config = config_copy_2.clone();
+                                ui_copy
+                                    .upgrade_in_event_loop(move |w| {
+                                        let fullscreen =
+                                            config.lock().is_ok_and(|c| c.start_fullscreen);
+                                        if fullscreen && !w.window().is_fullscreen() {
+                                            w.window().set_fullscreen(fullscreen);
+                                        }
+                                    })
+                                    .ok();
+                            }
+                        })
+                        .ok();
+
+                    ally_ui = Some(newui);
+                }
+
+                if let Ok(app_state) = app_state.lock() {
+                    state = *app_state;
+                }
+
+                sleep(Duration::from_millis(300));
+                if state == AppState::QuitApp {
+                    window.request(WindowCommand::Quit);
+                    break;
+                }
 
                 continue;
             }
