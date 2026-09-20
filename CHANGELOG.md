@@ -18,7 +18,7 @@
 - Add Aura logo power zone for G615LR: Thanks @Airzh1124
 - Add Aura support for G614PW: Thanks @mrDoctorWho
 - Fix issue with aura power state restoration: Thanks @olivkauwu
-- Add Aura support for G615LWL Thanks @Pelochus
+- Add Aura support for G615LW. Thanks @Pelochus
 - Add Aura support for ROG Strix G16 G614FP: Thanks @MsN-12
 - Fix Aura entries for some G615 models: Thanks again @Pelochus
 
